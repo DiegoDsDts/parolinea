@@ -10,10 +10,12 @@
   export let onDiceSelectMove: (index: number) => void = () => {};
   export let onDiceSelectEnd: () => void = () => {};
 
+  const DRAG_CORNER_DEAD_ZONE_RATIO = 0.34;
+
   let dragging = false;
 
   $: selectedSet = new Set(selectedIndices);
-  $: tileFont = gridSize <= 4 ? '2.1rem' : gridSize <= 6 ? '1.55rem' : '1.1rem';
+  $: tileFont = gridSize <= 4 ? '3.1rem' : gridSize <= 6 ? '2.55rem' : '2.1rem';
 
   function indexFromTarget(target: EventTarget | null): number | null {
     if (!(target instanceof Element)) return null;
@@ -23,9 +25,27 @@
     return Number.isInteger(index) ? index : null;
   }
 
-  function indexFromPoint(event: PointerEvent): number | null {
+  function isInDragCornerDeadZone(tile: HTMLElement, event: PointerEvent): boolean {
+    const rect = tile.getBoundingClientRect();
+    const deadZoneSize = Math.min(rect.width, rect.height) * DRAG_CORNER_DEAD_ZONE_RATIO;
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const nearLeft = x <= deadZoneSize;
+    const nearRight = x >= rect.width - deadZoneSize;
+    const nearTop = y <= deadZoneSize;
+    const nearBottom = y >= rect.height - deadZoneSize;
+
+    return (nearLeft || nearRight) && (nearTop || nearBottom);
+  }
+
+  function indexFromPoint(event: PointerEvent, ignoreDragCorners = false): number | null {
     const element = document.elementFromPoint(event.clientX, event.clientY);
-    return indexFromTarget(element);
+    if (!(element instanceof Element)) return null;
+    const tile = element.closest<HTMLElement>('[data-cell-index]');
+    if (!tile) return null;
+    if (ignoreDragCorners && isInDragCornerDeadZone(tile, event)) return null;
+
+    return indexFromTarget(tile);
   }
 
   function handlePointerDown(event: PointerEvent) {
@@ -41,7 +61,7 @@
 
   function handlePointerMove(event: PointerEvent) {
     if (!dragging || isPaused) return;
-    const index = indexFromPoint(event);
+    const index = indexFromPoint(event, true);
     if (index !== null) onDiceSelectMove(index);
     event.preventDefault();
   }
