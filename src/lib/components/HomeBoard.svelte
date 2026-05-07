@@ -36,9 +36,9 @@
     { label: '60m', value: 3600 },
   ];
 
-  let gridSize = 4;
+  let gridSize = 5;
   let gameTime = 0;
-  let minWordLength = 4;
+  let minWordLength = 5;
   let manualMode = false;
   let manualBoard = createEmptyBoard(gridSize);
   let manualEditorOpen = false;
