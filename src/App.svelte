@@ -307,7 +307,6 @@
       <span aria-hidden="true">P</span>
       <div>
         <strong>Parolinea</strong>
-        <small>Gioco di parole</small>
       </div>
     </div>
 

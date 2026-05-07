@@ -11,11 +11,43 @@
   export let onDiceSelectEnd: () => void = () => {};
 
   const DRAG_CORNER_DEAD_ZONE_RATIO = 0.28;
+  const DRAG_EDGE_DEAD_ZONE_RATIO = 0.08;
+  const TILE_LETTER_SIZE_RATIO = 0.50;
 
   let dragging = false;
+  let tileFont = '1rem';
 
   $: selectedSet = new Set(selectedIndices);
-  $: tileFont = gridSize <= 4 ? '3.1rem' : gridSize <= 6 ? '2.55rem' : '2.1rem';
+
+  function measureTileFont(node: HTMLElement, _layoutKey: string) {
+    let frame = 0;
+
+    const updateTileFont = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const tile = node.querySelector<HTMLElement>('[data-cell-index]');
+        if (!tile) return;
+
+        const rect = tile.getBoundingClientRect();
+        const tileSize = Math.min(rect.width, rect.height);
+        if (tileSize > 0) tileFont = `${tileSize * TILE_LETTER_SIZE_RATIO}px`;
+      });
+    };
+
+    const observer = new ResizeObserver(updateTileFont);
+    observer.observe(node);
+    updateTileFont();
+
+    return {
+      update(_nextLayoutKey: string) {
+        updateTileFont();
+      },
+      destroy() {
+        cancelAnimationFrame(frame);
+        observer.disconnect();
+      },
+    };
+  }
 
   function indexFromTarget(target: EventTarget | null): number | null {
     if (!(target instanceof Element)) return null;
@@ -36,6 +68,24 @@
     const nearBottom = y >= rect.height - deadZoneSize;
 
     return (nearLeft || nearRight) && (nearTop || nearBottom);
+  }
+
+  function isInDragEdgeDeadZone(tile: HTMLElement, event: PointerEvent): boolean {
+    const rect = tile.getBoundingClientRect();
+    const deadZoneSize = Math.min(rect.width, rect.height) * DRAG_EDGE_DEAD_ZONE_RATIO;
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    return (
+      x <= deadZoneSize ||
+      x >= rect.width - deadZoneSize ||
+      y <= deadZoneSize ||
+      y >= rect.height - deadZoneSize
+    );
+  }
+
+  function isInDragDeadZone(tile: HTMLElement, event: PointerEvent): boolean {
+    return isInDragCornerDeadZone(tile, event) || isInDragEdgeDeadZone(tile, event);
   }
 
   function isOrthogonallyAdjacentToLastSelected(index: number): boolean {
@@ -59,7 +109,7 @@
     if (!tile) return null;
     const index = indexFromTarget(tile);
     if (index === null) return null;
-    if (isOrthogonallyAdjacentToLastSelected(index) && isInDragCornerDeadZone(tile, event)) {
+    if (isOrthogonallyAdjacentToLastSelected(index) && isInDragDeadZone(tile, event)) {
       return null;
     }
 
@@ -97,6 +147,7 @@
   class="board"
   class:paused={isPaused}
   style={`--grid-size: ${gridSize}; --tile-font: ${tileFont};`}
+  use:measureTileFont={`${gridSize}:${board.length}`}
   on:pointerdown={handlePointerDown}
   on:pointermove={handlePointerMove}
   on:pointerup={handlePointerEnd}
