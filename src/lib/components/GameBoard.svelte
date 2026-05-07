@@ -10,7 +10,7 @@
   export let onDiceSelectMove: (index: number) => void = () => {};
   export let onDiceSelectEnd: () => void = () => {};
 
-  const DRAG_CORNER_DEAD_ZONE_RATIO = 0.34;
+  const DRAG_CORNER_DEAD_ZONE_RATIO = 0.28;
 
   let dragging = false;
 
@@ -38,14 +38,32 @@
     return (nearLeft || nearRight) && (nearTop || nearBottom);
   }
 
-  function indexFromPoint(event: PointerEvent, ignoreDragCorners = false): number | null {
+  function isOrthogonallyAdjacentToLastSelected(index: number): boolean {
+    const lastIndex = selectedIndices[selectedIndices.length - 1];
+    if (lastIndex === undefined) return false;
+
+    const row = Math.floor(index / gridSize);
+    const col = index % gridSize;
+    const lastRow = Math.floor(lastIndex / gridSize);
+    const lastCol = lastIndex % gridSize;
+    const rowDistance = Math.abs(row - lastRow);
+    const colDistance = Math.abs(col - lastCol);
+
+    return rowDistance + colDistance === 1;
+  }
+
+  function indexFromPoint(event: PointerEvent): number | null {
     const element = document.elementFromPoint(event.clientX, event.clientY);
     if (!(element instanceof Element)) return null;
     const tile = element.closest<HTMLElement>('[data-cell-index]');
     if (!tile) return null;
-    if (ignoreDragCorners && isInDragCornerDeadZone(tile, event)) return null;
+    const index = indexFromTarget(tile);
+    if (index === null) return null;
+    if (isOrthogonallyAdjacentToLastSelected(index) && isInDragCornerDeadZone(tile, event)) {
+      return null;
+    }
 
-    return indexFromTarget(tile);
+    return index;
   }
 
   function handlePointerDown(event: PointerEvent) {
@@ -61,7 +79,7 @@
 
   function handlePointerMove(event: PointerEvent) {
     if (!dragging || isPaused) return;
-    const index = indexFromPoint(event, true);
+    const index = indexFromPoint(event);
     if (index !== null) onDiceSelectMove(index);
     event.preventDefault();
   }
