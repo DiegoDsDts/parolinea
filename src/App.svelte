@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { BookOpen, Home, Pause, Play, RotateCcw, Settings, Square } from 'lucide-svelte';
+  import AphorismCard from './lib/components/AphorismCard.svelte';
   import DictionaryModal from './lib/components/DictionaryModal.svelte';
   import GameBoard from './lib/components/GameBoard.svelte';
   import GameTimer from './lib/components/GameTimer.svelte';
@@ -316,8 +317,16 @@
     <section class="board-stage" aria-label="Area principale">
       <div class="board-info">
         {#if activeTab === 'game' && gameMode === 'play' && gameConfig}
-          <div class="info-cell">
-            <span>Tempo</span>
+          <div
+            class:valid={feedbackType === 'word-valid'}
+            class:duplicate={feedbackType === 'word-duplicate'}
+            class:invalid={feedbackType === 'word-invalid'}
+            class="board-title current-title"
+          >
+            {currentWord || ''}
+          </div>
+          <div class="board-meta">
+            <strong>{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'}</strong>
             <GameTimer
               seconds={gameConfig.duration_sec}
               active={gameActive}
@@ -326,70 +335,41 @@
               onEnd={() => endGame(false)}
             />
           </div>
-          <div
-            class:valid={feedbackType === 'word-valid'}
-            class:duplicate={feedbackType === 'word-duplicate'}
-            class:invalid={feedbackType === 'word-invalid'}
-            class="info-cell current-cell"
-          >
-            <span>Parola</span>
-            <strong>{currentWord || '-'}</strong>
-          </div>
-          <div class="info-cell">
-            <span>Punti</span>
-            <strong>{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'}</strong>
-          </div>
         {:else if activeTab === 'game' && gameMode === 'recap'}
-          <div class="info-cell">
-            <span>Parole</span>
+          <div class="board-title">
+            <strong>Parolinea</strong>
+            <span>Riepilogo</span>
+          </div>
+          <div class="board-meta">
             <strong>{foundWordsList.length} / {allSolutionsList.length}</strong>
-          </div>
-          <div class="info-cell">
-            <span>Risultato</span>
-            <strong>{wordPercent}%</strong>
-          </div>
-          <div class="info-cell">
-            <span>Punti</span>
-            <strong>{totalScore} / {totalPossibleScore}</strong>
+            <span>{wordPercent}% parole</span>
           </div>
         {:else if activeTab === 'info'}
-          <div class="info-cell">
-            <span>Vista</span>
-            <strong>Info</strong>
-          </div>
-          <div class="info-cell">
-            <span>Board</span>
-            <strong>Regole</strong>
-          </div>
-          <div class="info-cell">
-            <span>Gioco</span>
+          <div class="board-title">
             <strong>Parolinea</strong>
+            <span>Info</span>
+          </div>
+          <div class="board-meta">
+            <strong>Regole</strong>
+            <span>Punti</span>
           </div>
         {:else if activeTab === 'settings'}
-          <div class="info-cell">
-            <span>Vista</span>
-            <strong>Opzioni</strong>
+          <div class="board-title">
+            <strong>Parolinea</strong>
+            <span>Impostazioni</span>
           </div>
-          <div class="info-cell">
-            <span>Tema</span>
+          <div class="board-meta">
             <strong>{themePreference}</strong>
-          </div>
-          <div class="info-cell">
-            <span>Dizionario</span>
-            <strong>{$dictionaryStatus.ready ? 'Pronto' : 'Attesa'}</strong>
+            <span>{$dictionaryStatus.ready ? 'Pronto' : 'Attesa'}</span>
           </div>
         {:else}
-          <div class="info-cell">
-            <span>Parolinea</span>
-            <strong>Home</strong>
+          <div class="board-title">
+            <strong>Parolinea</strong>
+            <span>Home</span>
           </div>
-          <div class="info-cell">
-            <span>Dizionario</span>
+          <div class="board-meta">
             <strong>{$dictionaryStatus.ready ? 'Pronto' : 'Attesa'}</strong>
-          </div>
-          <div class="info-cell">
-            <span>Parole</span>
-            <strong>{$dictionaryStatus.wordsLoaded > 0 ? $dictionaryStatus.wordsLoaded.toLocaleString('it-IT') : '-'}</strong>
+            <span>{$dictionaryStatus.wordsLoaded > 0 ? $dictionaryStatus.wordsLoaded.toLocaleString('it-IT') : '-'}</span>
           </div>
         {/if}
       </div>
@@ -472,10 +452,7 @@
           <span>{$dictionaryStatus.ready ? `${$dictionaryStatus.wordsLoaded.toLocaleString('it-IT')} parole caricate` : 'Dizionario in caricamento'}</span>
         </div>
       {:else}
-        <div class="context-copy">
-          <strong>Nuova partita</strong>
-          <span>Configura la board 3x3 e avvia quando il dizionario e pronto.</span>
-        </div>
+        <AphorismCard />
       {/if}
     </section>
 

@@ -195,7 +195,7 @@
     aspect-ratio: 1;
     display: grid;
     place-items: center;
-    border: 1px solid var(--tile-border);
+    border: 1.5px solid var(--tile-border);
     border-radius: 6px;
     background: var(--tile);
     color: var(--ink);

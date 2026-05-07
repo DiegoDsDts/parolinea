@@ -205,69 +205,96 @@ a:focus-visible {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.45rem;
+  grid-template-columns: minmax(0, 4fr) minmax(4.6rem, 1fr);
+  align-items: end;
+  gap: 0.65rem;
 }
 
-.info-cell {
+.board-title {
   min-width: 0;
-  min-height: 0;
   display: grid;
-  align-content: center;
-  gap: 0.18rem;
-  padding: 0.5rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  justify-items: start;
+  align-content: end;
+  gap: 0.15rem;
+  overflow: hidden;
+  text-align: left;
 }
 
-.info-cell span {
-  overflow: hidden;
+.board-title,
+.board-title strong {
+  color: var(--ink);
+  font-size: clamp(2rem, calc(var(--board-size) * 0.11), 3.55rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.board-title span {
   color: var(--muted);
-  font-size: clamp(0.62rem, 1.8vw, 0.75rem);
+  font-size: clamp(0.82rem, calc(var(--board-size) * 0.035), 1.1rem);
   font-weight: 800;
   line-height: 1;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
 }
 
-.info-cell strong,
-.info-cell .timer {
+.current-title {
+  min-height: 1em;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+  color: #565656;
+}
+
+.current-title:empty::before {
+  content: "";
+}
+
+.current-title.valid {
+  color: var(--success);
+}
+
+.current-title.duplicate {
+  color: var(--warning);
+}
+
+.current-title.invalid {
+  color: var(--danger);
+}
+
+.board-meta {
+  min-width: 0;
+  display: grid;
+  justify-items: end;
+  align-content: end;
+  gap: 0.28rem;
+  overflow: hidden;
+  text-align: right;
+}
+
+.board-meta strong,
+.board-meta span,
+.board-meta .timer {
   min-width: 0;
   overflow: hidden;
-  font-size: clamp(0.9rem, 2.9vw, 1.18rem);
-  font-weight: 850;
-  line-height: 1.05;
+  line-height: 1;
   text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.info-cell .timer {
-  justify-content: flex-start;
+.board-meta strong {
+  font-size: clamp(0.9rem, calc(var(--board-size) * 0.036), 1.22rem);
+  font-weight: 900;
 }
 
-.current-cell {
-  text-align: center;
+.board-meta span,
+.board-meta .timer {
+  color: var(--muted);
+  font-size: clamp(0.78rem, calc(var(--board-size) * 0.031), 1rem);
+  font-weight: 850;
 }
 
-.current-cell strong {
-  word-break: break-all;
-}
-
-.info-cell.valid strong {
-  color: var(--success);
-}
-
-.info-cell.duplicate strong {
-  color: var(--warning);
-}
-
-.info-cell.invalid strong {
-  color: var(--danger);
+.board-meta .timer {
+  min-width: 0;
+  justify-content: flex-end;
 }
 
 .board-area {
@@ -410,11 +437,6 @@ a:focus-visible {
 
   .board-info {
     gap: 0.32rem;
-  }
-
-  .info-cell {
-    padding: 0.42rem 0.48rem;
-    border-radius: 7px;
   }
 
   .command-bar {
