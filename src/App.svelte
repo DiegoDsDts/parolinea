@@ -1,13 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { BookOpen, Gamepad2, Settings } from 'lucide-svelte';
+  import { BookOpen, Home, Pause, Play, RotateCcw, Settings, Square } from 'lucide-svelte';
   import DictionaryModal from './lib/components/DictionaryModal.svelte';
-  import GameSetup from './lib/components/GameSetup.svelte';
-  import GameView from './lib/components/GameView.svelte';
-  import InfoView from './lib/components/InfoView.svelte';
+  import GameBoard from './lib/components/GameBoard.svelte';
+  import GameTimer from './lib/components/GameTimer.svelte';
+  import HomeBoard from './lib/components/HomeBoard.svelte';
+  import InfoBoard from './lib/components/InfoBoard.svelte';
   import LoadingOverlay from './lib/components/LoadingOverlay.svelte';
-  import RecapView from './lib/components/RecapView.svelte';
-  import SettingsView from './lib/components/SettingsView.svelte';
+  import SettingsBoard from './lib/components/SettingsBoard.svelte';
+  import WordList from './lib/components/WordList.svelte';
   import { dictionaryClient, dictionaryStatus } from './lib/services/dictionaryClient';
   import { parseGridSize } from './lib/services/gameConfig';
   import { getWordScore, sortWords } from './lib/services/scoring';
@@ -22,11 +23,6 @@
   } from './lib/types';
 
   const THEME_STORAGE_KEY = 'parolinea/theme-preference';
-  const tabs: Array<{ id: ActiveTab; label: string; Icon: typeof Gamepad2 }> = [
-    { id: 'game', label: 'Gioca', Icon: Gamepad2 },
-    { id: 'info', label: 'Info', Icon: BookOpen },
-    { id: 'settings', label: 'Impostazioni', Icon: Settings },
-  ];
 
   let activeTab: ActiveTab = 'game';
   let gameMode: GameMode = 'config';
@@ -56,6 +52,18 @@
   $: document.documentElement.dataset.theme = effectiveTheme;
   $: totalScore = foundWordsList.reduce((sum, item) => sum + item.score, 0);
   $: totalPossibleScore = allSolutionsList.reduce((sum, item) => sum + item.score, 0);
+  $: recapFoundWords = new Set(foundWordsList.map((item) => item.word));
+  $: solutionItems = allSolutionsList.map((item) => {
+    const found = recapFoundWords.has(item.word);
+    return {
+      ...item,
+      found,
+      displayScore: found ? `+${item.score}` : String(item.score),
+    };
+  });
+  $: wordPercent = allSolutionsList.length > 0 ? Math.round((foundWordsList.length / allSolutionsList.length) * 100) : 0;
+  $: recapGridSize = gameConfig ? parseGridSize(gameConfig.grid_size) : 4;
+  $: staticTileFont = `calc(var(--board-size) * ${0.45 / recapGridSize})`;
   $: loadingVisible = $dictionaryStatus.loading || gameMode === 'loading';
   $: loadingTitle = gameMode === 'loading' ? 'Creazione dello schema' : 'Avvio di Parolinea';
   $: loadingDetail =
@@ -302,87 +310,217 @@
 </script>
 
 <div class="app-shell">
-  <header class="app-header">
-    <div class="brand">
-      <span aria-hidden="true">P</span>
-      <div>
-        <strong>Parolinea</strong>
+  <main class="app-main">
+    <div class="top-blank" aria-hidden="true"></div>
+
+    <section class="board-stage" aria-label="Area principale">
+      <div class="board-info">
+        {#if activeTab === 'game' && gameMode === 'play' && gameConfig}
+          <div class="info-cell">
+            <span>Tempo</span>
+            <GameTimer
+              seconds={gameConfig.duration_sec}
+              active={gameActive}
+              paused={isPaused}
+              resetKey={timerResetKey}
+              onEnd={() => endGame(false)}
+            />
+          </div>
+          <div
+            class:valid={feedbackType === 'word-valid'}
+            class:duplicate={feedbackType === 'word-duplicate'}
+            class:invalid={feedbackType === 'word-invalid'}
+            class="info-cell current-cell"
+          >
+            <span>Parola</span>
+            <strong>{currentWord || '-'}</strong>
+          </div>
+          <div class="info-cell">
+            <span>Punti</span>
+            <strong>{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'}</strong>
+          </div>
+        {:else if activeTab === 'game' && gameMode === 'recap'}
+          <div class="info-cell">
+            <span>Parole</span>
+            <strong>{foundWordsList.length} / {allSolutionsList.length}</strong>
+          </div>
+          <div class="info-cell">
+            <span>Risultato</span>
+            <strong>{wordPercent}%</strong>
+          </div>
+          <div class="info-cell">
+            <span>Punti</span>
+            <strong>{totalScore} / {totalPossibleScore}</strong>
+          </div>
+        {:else if activeTab === 'info'}
+          <div class="info-cell">
+            <span>Vista</span>
+            <strong>Info</strong>
+          </div>
+          <div class="info-cell">
+            <span>Board</span>
+            <strong>Regole</strong>
+          </div>
+          <div class="info-cell">
+            <span>Gioco</span>
+            <strong>Parolinea</strong>
+          </div>
+        {:else if activeTab === 'settings'}
+          <div class="info-cell">
+            <span>Vista</span>
+            <strong>Opzioni</strong>
+          </div>
+          <div class="info-cell">
+            <span>Tema</span>
+            <strong>{themePreference}</strong>
+          </div>
+          <div class="info-cell">
+            <span>Dizionario</span>
+            <strong>{$dictionaryStatus.ready ? 'Pronto' : 'Attesa'}</strong>
+          </div>
+        {:else}
+          <div class="info-cell">
+            <span>Parolinea</span>
+            <strong>Home</strong>
+          </div>
+          <div class="info-cell">
+            <span>Dizionario</span>
+            <strong>{$dictionaryStatus.ready ? 'Pronto' : 'Attesa'}</strong>
+          </div>
+          <div class="info-cell">
+            <span>Parole</span>
+            <strong>{$dictionaryStatus.wordsLoaded > 0 ? $dictionaryStatus.wordsLoaded.toLocaleString('it-IT') : '-'}</strong>
+          </div>
+        {/if}
       </div>
-    </div>
 
-    <nav class="top-tabs" aria-label="Navigazione principale">
-      {#each tabs as tab}
-        <button class:active={activeTab === tab.id} type="button" on:click={() => setActiveTab(tab.id)}>
-          <svelte:component this={tab.Icon} size={18} />
-          {tab.label}
-        </button>
-      {/each}
-    </nav>
-  </header>
+      <div class="board-area">
+        {#if activeTab === 'game'}
+          {#if $dictionaryStatus.error}
+            <section class="state-board">
+              <h1>Dizionario non disponibile</h1>
+              <p>{$dictionaryStatus.error}</p>
+              <button class="button primary" type="button" on:click={reloadDictionary}>Riprova</button>
+            </section>
+          {:else if gameMode === 'config'}
+            <HomeBoard
+              dictionaryStatus={$dictionaryStatus}
+              onStart={startNewGame}
+              onInfo={() => setActiveTab('info')}
+              onSettings={() => setActiveTab('settings')}
+            />
+          {:else if gameMode === 'play' && gameConfig}
+            <div class="play-board-slot">
+              <GameBoard
+                {board}
+                {selectedIndices}
+                {feedbackType}
+                gridSize={parseGridSize(gameConfig.grid_size)}
+                {isPaused}
+                onDiceSelectStart={handleDicePress}
+                onDiceSelectMove={handleDiceMove}
+                onDiceSelectEnd={handleDiceRelease}
+              />
+            </div>
+          {:else if gameMode === 'recap' && gameConfig}
+            <div class="static-board" style={`--grid-size: ${recapGridSize}; --static-tile-font: ${staticTileFont};`}>
+              {#each board as row}
+                {#each row as letter}
+                  <div class="static-tile">{letter}</div>
+                {/each}
+              {/each}
+            </div>
+          {/if}
+        {:else if activeTab === 'info'}
+          <InfoBoard />
+        {:else}
+          <SettingsBoard
+            {themePreference}
+            dictionaryStatus={$dictionaryStatus}
+            onThemeChange={setThemePreference}
+            onReloadDictionary={reloadDictionary}
+            onGame={() => setActiveTab('game')}
+            onInfo={() => setActiveTab('info')}
+          />
+        {/if}
+      </div>
+    </section>
 
-  <main class:play-main={activeTab === 'game' && gameMode === 'play'} class="app-main">
-    {#if activeTab === 'game'}
-      {#if $dictionaryStatus.error}
-        <section class="error-panel">
-          <h1>Dizionario non disponibile</h1>
-          <p>{$dictionaryStatus.error}</p>
-          <button class="button primary" type="button" on:click={reloadDictionary}>Riprova</button>
-        </section>
-      {:else if gameMode === 'config'}
-        <GameSetup dictionaryStatus={$dictionaryStatus} onStart={startNewGame} />
-      {:else if gameMode === 'play' && gameConfig}
-        <GameView
-          {gameConfig}
-          {board}
-          {selectedIndices}
-          {currentWord}
-          {feedbackType}
-          {foundWordsList}
-          {totalScore}
-          {totalPossibleScore}
-          allSolutionsCount={allSolutionsList.length}
-          {gameActive}
-          {isPaused}
-          {timerResetKey}
-          onDiceSelectStart={handleDicePress}
-          onDiceSelectMove={handleDiceMove}
-          onDiceSelectEnd={handleDiceRelease}
-          onHome={goHome}
-          onPauseToggle={() => (isPaused = !isPaused)}
-          onEndGame={endGame}
+    <section class="context-panel" aria-label="Area contestuale">
+      {#if activeTab === 'game' && gameMode === 'play'}
+        <WordList
+          title="Parole trovate"
+          words={foundWordsList}
+          emptyText="Nessuna parola trovata"
           onWordSelect={openDefinition}
         />
-      {:else if gameMode === 'recap' && gameConfig}
-        <RecapView
-          {foundWordsList}
-          {allSolutionsList}
-          {board}
-          {gameConfig}
-          onHome={goHome}
-          onRestart={restartWithSameConfig}
+      {:else if activeTab === 'game' && gameMode === 'recap'}
+        <WordList
+          title="Tutte le soluzioni"
+          words={solutionItems}
+          showFoundState
           onWordSelect={openDefinition}
         />
+      {:else if activeTab === 'info'}
+        <div class="context-copy">
+          <strong>Regole e punteggio</strong>
+          <span>Le informazioni principali restano dentro la board; questo spazio rimane fisso per contenuti di supporto.</span>
+        </div>
+      {:else if activeTab === 'settings'}
+        <div class="context-copy">
+          <strong>Impostazioni</strong>
+          <span>{$dictionaryStatus.ready ? `${$dictionaryStatus.wordsLoaded.toLocaleString('it-IT')} parole caricate` : 'Dizionario in caricamento'}</span>
+        </div>
+      {:else}
+        <div class="context-copy">
+          <strong>Nuova partita</strong>
+          <span>Configura la board 3x3 e avvia quando il dizionario e pronto.</span>
+        </div>
       {/if}
-    {:else if activeTab === 'info'}
-      <InfoView />
-    {:else}
-      <SettingsView
-        {themePreference}
-        dictionaryStatus={$dictionaryStatus}
-        onThemeChange={setThemePreference}
-        onReloadDictionary={reloadDictionary}
-      />
-    {/if}
-  </main>
+    </section>
 
-  <nav class="bottom-tabs" aria-label="Navigazione principale mobile">
-    {#each tabs as tab}
-      <button class:active={activeTab === tab.id} type="button" on:click={() => setActiveTab(tab.id)}>
-        <svelte:component this={tab.Icon} size={20} />
-        <span>{tab.label}</span>
-      </button>
-    {/each}
-  </nav>
+    <nav class="command-bar" aria-label="Comandi">
+      {#if activeTab === 'game' && gameMode === 'play'}
+        <button class="button secondary" type="button" on:click={goHome}>
+          <Home size={18} />
+          Home
+        </button>
+        <button class="button secondary square" type="button" aria-label={isPaused ? 'Riprendi' : 'Pausa'} on:click={() => (isPaused = !isPaused)}>
+          {#if isPaused}
+            <Play size={19} />
+          {:else}
+            <Pause size={19} />
+          {/if}
+        </button>
+        <button class="button danger" type="button" on:click={() => endGame(true)}>
+          <Square size={16} />
+          Fine
+        </button>
+      {:else if activeTab === 'game' && gameMode === 'recap'}
+        <button class="button secondary" type="button" on:click={goHome}>
+          <Home size={18} />
+          Home
+        </button>
+        <button class="button primary" type="button" on:click={restartWithSameConfig}>
+          <RotateCcw size={18} />
+          Rigioca
+        </button>
+      {:else}
+        <button class="button secondary" type="button" on:click={() => setActiveTab('game')}>
+          <Home size={18} />
+          Home
+        </button>
+        <button class="button secondary" type="button" on:click={() => setActiveTab('info')}>
+          <BookOpen size={18} />
+          Info
+        </button>
+        <button class="button secondary" type="button" on:click={() => setActiveTab('settings')}>
+          <Settings size={18} />
+          Opzioni
+        </button>
+      {/if}
+    </nav>
+  </main>
 </div>
 
 <LoadingOverlay
