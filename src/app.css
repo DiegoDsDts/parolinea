@@ -154,6 +154,17 @@ a:focus-visible {
   padding-inline: 0;
 }
 
+.pause-toggle svg {
+  width: 2.35rem !important;
+  height: 2.35rem !important;
+  min-width: 2.35rem;
+}
+
+.command-bar .pause-toggle {
+  width: 3.7rem;
+  min-height: 3.2rem;
+}
+
 .icon-button {
   width: 2.25rem;
   height: 2.25rem;

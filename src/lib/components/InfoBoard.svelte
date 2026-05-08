@@ -1,27 +1,41 @@
 <script lang="ts">
-  import { CheckCircle2, Clock3, Grid3X3, Link2, ListChecks, MousePointer2, RotateCcw, Trophy, Type } from 'lucide-svelte';
+  import { ArrowLeft } from 'lucide-svelte';
 
-  const cells = [
-    { title: 'Collega', text: 'Trascina tra lettere vicine', Icon: Link2 },
-    { title: 'Direzioni', text: 'Orizzontale, verticale, diagonale', Icon: Grid3X3 },
-    { title: 'Unica volta', text: 'Ogni dado vale una volta', Icon: RotateCcw },
-    { title: 'Minima', text: 'Rispetta la lunghezza scelta', Icon: Type },
-    { title: 'Punti', text: 'Parole lunghe valgono di piu', Icon: Trophy },
-    { title: 'Tempo', text: 'Finisce allo scadere', Icon: Clock3 },
-    { title: 'Drag', text: 'Gli angoli aiutano le diagonali', Icon: MousePointer2 },
-    { title: 'Valide', text: 'Contano solo parole italiane', Icon: CheckCircle2 },
-    { title: 'Scala', text: '2:2  3:5  4:9  5:14  6:20', Icon: ListChecks },
+  export let onBack: () => void = () => {};
+
+  const scoreRows = [
+    { length: '2', score: '2' },
+    { length: '3', score: '5' },
+    { length: '4', score: '9' },
+    { length: '5', score: '14' },
+    { length: '6', score: '20' },
+    { length: '7', score: '27' },
+    { length: '8', score: '35' },
+    { length: '9', score: '44' },
+    { length: '10', score: '54' },
+    { length: '11', score: '65' },
+    { length: '12+', score: '77' },
   ];
 </script>
 
 <div class="info-board" aria-label="Regole del gioco">
-  {#each cells as cell}
-    <section class="info-tile">
-      <svelte:component this={cell.Icon} size={23} />
-      <h2>{cell.title}</h2>
-      <p>{cell.text}</p>
-    </section>
-  {/each}
+  <section class="info-tile score-tile">
+    <h2>Valore parole</h2>
+    <div class="score-table" aria-label="Punti per lunghezza parola">
+      <span class="score-head">Lettere</span>
+      <span class="score-head">Punti</span>
+      {#each scoreRows as row}
+        <span>{row.length}</span>
+        <strong>{row.score}</strong>
+      {/each}
+    </div>
+  </section>
+
+  <button class="info-tile back-tile" type="button" on:click={onBack}>
+    <ArrowLeft size={23} />
+    <h2>Indietro</h2>
+    <p>Home</p>
+  </button>
 </div>
 
 <style>
@@ -50,6 +64,17 @@
     text-align: center;
   }
 
+  .score-tile {
+    grid-column: 1 / -1;
+    grid-row: 1 / span 2;
+    gap: clamp(0.42rem, 1.8vw, 0.8rem);
+    padding: clamp(0.7rem, 2.4vw, 1rem);
+  }
+
+  button.info-tile {
+    cursor: pointer;
+  }
+
   h2,
   p {
     margin: 0;
@@ -60,11 +85,51 @@
     line-height: 1;
   }
 
+  .score-tile h2 {
+    font-size: clamp(1rem, 4.2vw, 1.45rem);
+  }
+
   p {
     color: var(--muted);
     font-size: clamp(0.58rem, 1.8vw, 0.76rem);
     font-weight: 700;
     line-height: 1.16;
     overflow-wrap: anywhere;
+  }
+
+  .score-table {
+    width: min(100%, 15rem);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.16rem 0.5rem;
+    color: var(--muted);
+    font-size: clamp(0.7rem, 2.45vw, 0.95rem);
+    font-weight: 800;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .score-table span,
+  .score-table strong {
+    min-width: 0;
+    padding: 0.18rem 0.32rem;
+    border-radius: 4px;
+    background: var(--surface-muted);
+  }
+
+  .score-table strong {
+    color: var(--ink);
+  }
+
+  .score-head {
+    color: var(--ink);
+    background: transparent !important;
+    font-size: clamp(0.6rem, 1.9vw, 0.78rem);
+    text-transform: uppercase;
+  }
+
+  .back-tile {
+    grid-column: 1;
+    grid-row: 3;
   }
 </style>

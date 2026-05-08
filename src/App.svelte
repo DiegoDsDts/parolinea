@@ -477,7 +477,7 @@
             </div>
           {/if}
         {:else if activeTab === 'info'}
-          <InfoBoard />
+          <InfoBoard onBack={goHome} />
         {:else}
           <SettingsBoard
             {themePreference}
@@ -514,11 +514,11 @@
           <Home size={18} />
           Home
         </button>
-        <button class="button secondary square" type="button" aria-label={isPaused ? 'Riprendi' : 'Pausa'} on:click={() => (isPaused = !isPaused)}>
+        <button class="button secondary square pause-toggle" type="button" aria-label={isPaused ? 'Riprendi' : 'Pausa'} on:click={() => (isPaused = !isPaused)}>
           {#if isPaused}
-            <Play size={19} />
+            <Play strokeWidth={1.4} />
           {:else}
-            <Pause size={19} />
+            <Pause strokeWidth={1.4} />
           {/if}
         </button>
         <button class="button danger" type="button" on:click={() => endGame(true)}>
