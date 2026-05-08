@@ -441,16 +441,6 @@
           showFoundState
           onWordSelect={openDefinition}
         />
-      {:else if activeTab === 'info'}
-        <div class="context-copy">
-          <strong>Regole e punteggio</strong>
-          <span>Le informazioni principali restano dentro la board; questo spazio rimane fisso per contenuti di supporto.</span>
-        </div>
-      {:else if activeTab === 'settings'}
-        <div class="context-copy">
-          <strong>Impostazioni</strong>
-          <span>{$dictionaryStatus.ready ? `${$dictionaryStatus.wordsLoaded.toLocaleString('it-IT')} parole caricate` : 'Dizionario in caricamento'}</span>
-        </div>
       {:else}
         <AphorismCard />
       {/if}
