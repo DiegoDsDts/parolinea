@@ -55,7 +55,7 @@
       author: 'Elias Canetti',
     },
     {
-      text: 'Le parole sono la più potente droga usata dall’uomo.',
+      text: 'Le parole sono la più potente droga usata dall\'uomo.',
       author: 'Rudyard Kipling',
     },
     {
@@ -81,6 +81,34 @@
     {
       text: 'Leggendo i grandi autori di aforismi, si ha l\'impressione che si conoscessero tutti bene tra loro.',
       author: 'Elias Canetti',
+    },
+    {
+      text: 'Conoscere un\'altra lingua significa avere una seconda anima.',
+      author: 'Carlo Magno',
+    },
+    {
+      text: 'La lingua non è oggi peggiore rispetto a ieri. È più pratica. Come il mondo in cui viviamo.',
+      author: 'Noam Chomsky',
+    },
+    {
+      text: 'Ogni parola che si pronuncia fa pensare al suo contrario.',
+      author: 'Wolfgang Goethe',
+    },
+    {
+      text: 'Una parola è morta quando vien detta, dicono alcuni. Io dico che comincia a vivere soltanto allora.',
+      author: 'Emily Dickinson',
+    },
+    {
+      text: 'Le parole fanno un effetto in bocca e un altro negli orecchi.',
+      author: 'Alessandro Manzoni',
+    },
+    {
+      text: 'Modella l\'azione alla parola, la parola all\'azione. ',
+      author: 'William Shakespeare',
+    },
+    {
+      text: 'Chi ama veramente le parole fa di tutto per farti rimanere senza.',
+      author: 'Fabrizio Caramagna',
     },
   ];
 
