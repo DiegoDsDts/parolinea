@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { BookOpen, Home, Pause, Play, RotateCcw, Settings, Square } from 'lucide-svelte';
+  import { Flag, Home, Pause, Play, RotateCcw } from 'lucide-svelte';
   import AphorismCard from './lib/components/AphorismCard.svelte';
+  import ConfirmModal from './lib/components/ConfirmModal.svelte';
   import DictionaryModal from './lib/components/DictionaryModal.svelte';
   import GameBoard from './lib/components/GameBoard.svelte';
   import GameTimer from './lib/components/GameTimer.svelte';
@@ -11,7 +12,7 @@
   import SettingsBoard from './lib/components/SettingsBoard.svelte';
   import WordList from './lib/components/WordList.svelte';
   import { dictionaryClient, dictionaryStatus } from './lib/services/dictionaryClient';
-  import { parseGridSize } from './lib/services/gameConfig';
+  import { generateGameConfig, parseGridSize } from './lib/services/gameConfig';
   import { getWordScore, sortWords } from './lib/services/scoring';
   import type {
     ActiveTab,
@@ -45,6 +46,14 @@
   let selectedDefinitionWord = '';
   let definitionOpen = false;
   let toastMessage = '';
+  let confirmOpen = false;
+  let confirmTitle = '';
+  let confirmMessage = '';
+  let confirmLabel = 'Conferma';
+  let confirmDanger = false;
+  let confirmAction: (() => void) | null = null;
+  let confirmShouldResume = false;
+  let homeStartSignal = 0;
 
   let themePreference: ThemePreference = 'system';
   let systemTheme: EffectiveTheme = 'light';
@@ -262,14 +271,41 @@
     }
   }
 
-  function goHome() {
-    if (gameMode === 'play') {
-      const confirmed = window.confirm(
-        'Sei sicuro di voler tornare alla schermata iniziale? La partita in corso verra persa.',
-      );
-      if (!confirmed) return;
-    }
+  function openConfirm(options: {
+    title: string;
+    message: string;
+    confirmLabel: string;
+    danger?: boolean;
+    onConfirm: () => void;
+  }) {
+    confirmTitle = options.title;
+    confirmMessage = options.message;
+    confirmLabel = options.confirmLabel;
+    confirmDanger = options.danger ?? false;
+    confirmAction = options.onConfirm;
+    confirmShouldResume = gameMode === 'play' && !isPaused;
+    if (confirmShouldResume) isPaused = true;
+    confirmOpen = true;
+  }
 
+  function closeConfirm() {
+    confirmOpen = false;
+    confirmAction = null;
+    if (confirmShouldResume) {
+      isPaused = false;
+      confirmShouldResume = false;
+    }
+  }
+
+  function confirmDialogAction() {
+    const action = confirmAction;
+    confirmOpen = false;
+    confirmAction = null;
+    confirmShouldResume = false;
+    action?.();
+  }
+
+  function completeGoHome() {
     dictionaryClient.cancelSolve();
     resetRoundState();
     gameConfig = null;
@@ -278,10 +314,31 @@
     activeTab = 'game';
   }
 
+  function goHome() {
+    if (gameMode === 'play') {
+      openConfirm({
+        title: 'Torna alla home',
+        message: 'La partita in corso verra persa.',
+        confirmLabel: 'Torna home',
+        danger: true,
+        onConfirm: completeGoHome,
+      });
+      return;
+    }
+
+    completeGoHome();
+  }
+
   function endGame(manual: boolean) {
     if (manual) {
-      const confirmed = window.confirm('Sei sicuro di voler terminare la partita?');
-      if (!confirmed) return;
+      openConfirm({
+        title: 'Termina partita',
+        message: 'Vuoi chiudere la partita e vedere il riepilogo?',
+        confirmLabel: 'Termina',
+        danger: true,
+        onConfirm: () => endGame(false),
+      });
+      return;
     }
 
     clearFeedbackTimer();
@@ -295,6 +352,22 @@
 
   function restartWithSameConfig() {
     if (gameConfig) startNewGame(gameConfig);
+  }
+
+  function startDefaultGame() {
+    if (!$dictionaryStatus.ready) return;
+    startNewGame(generateGameConfig(5, 5, 0));
+  }
+
+  function startFromCommandBar() {
+    if (!$dictionaryStatus.ready) return;
+
+    if (activeTab === 'game' && gameMode === 'config') {
+      homeStartSignal += 1;
+      return;
+    }
+
+    startDefaultGame();
   }
 
   function openDefinition(word: string) {
@@ -349,28 +422,19 @@
             <strong>Parolinea</strong>
             <span>Info</span>
           </div>
-          <div class="board-meta">
-            <strong>Regole</strong>
-            <span>Punti</span>
-          </div>
+          <div class="board-meta" aria-hidden="true"></div>
         {:else if activeTab === 'settings'}
           <div class="board-title">
             <strong>Parolinea</strong>
             <span>Impostazioni</span>
           </div>
-          <div class="board-meta">
-            <strong>{themePreference}</strong>
-            <span>{$dictionaryStatus.ready ? 'Pronto' : 'Attesa'}</span>
-          </div>
+          <div class="board-meta" aria-hidden="true"></div>
         {:else}
           <div class="board-title">
             <strong>Parolinea</strong>
             <span>Home</span>
           </div>
-          <div class="board-meta">
-            <strong>{$dictionaryStatus.ready ? 'Pronto' : 'Attesa'}</strong>
-            <span>{$dictionaryStatus.wordsLoaded > 0 ? $dictionaryStatus.wordsLoaded.toLocaleString('it-IT') : '-'}</span>
-          </div>
+          <div class="board-meta" aria-hidden="true"></div>
         {/if}
       </div>
 
@@ -385,6 +449,7 @@
           {:else if gameMode === 'config'}
             <HomeBoard
               dictionaryStatus={$dictionaryStatus}
+              startSignal={homeStartSignal}
               onStart={startNewGame}
               onInfo={() => setActiveTab('info')}
               onSettings={() => setActiveTab('settings')}
@@ -416,11 +481,8 @@
         {:else}
           <SettingsBoard
             {themePreference}
-            dictionaryStatus={$dictionaryStatus}
             onThemeChange={setThemePreference}
-            onReloadDictionary={reloadDictionary}
-            onGame={() => setActiveTab('game')}
-            onInfo={() => setActiveTab('info')}
+            onBack={goHome}
           />
         {/if}
       </div>
@@ -460,7 +522,7 @@
           {/if}
         </button>
         <button class="button danger" type="button" on:click={() => endGame(true)}>
-          <Square size={16} />
+          <Flag size={17} />
           Fine
         </button>
       {:else if activeTab === 'game' && gameMode === 'recap'}
@@ -473,17 +535,9 @@
           Rigioca
         </button>
       {:else}
-        <button class="button secondary" type="button" on:click={() => setActiveTab('game')}>
-          <Home size={18} />
-          Home
-        </button>
-        <button class="button secondary" type="button" on:click={() => setActiveTab('info')}>
-          <BookOpen size={18} />
-          Info
-        </button>
-        <button class="button secondary" type="button" on:click={() => setActiveTab('settings')}>
-          <Settings size={18} />
-          Opzioni
+        <button class="button primary start-command" type="button" disabled={!$dictionaryStatus.ready} on:click={startFromCommandBar}>
+          <Play size={18} />
+          Start
         </button>
       {/if}
     </nav>
@@ -501,6 +555,16 @@
   open={definitionOpen}
   word={selectedDefinitionWord}
   onClose={() => (definitionOpen = false)}
+/>
+
+<ConfirmModal
+  open={confirmOpen}
+  title={confirmTitle}
+  message={confirmMessage}
+  confirmLabel={confirmLabel}
+  danger={confirmDanger}
+  onCancel={closeConfirm}
+  onConfirm={confirmDialogAction}
 />
 
 {#if toastMessage}

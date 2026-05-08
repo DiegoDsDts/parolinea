@@ -4,6 +4,7 @@
   import { createManualGameConfig, generateGameConfig } from '../services/gameConfig';
   import { createEmptyBoard } from '../services/letters';
   import BoardPreview from './BoardPreview.svelte';
+  import CustomSelect from './CustomSelect.svelte';
   import ImportGameModal from './ImportGameModal.svelte';
   import ManualBoardEditor from './ManualBoardEditor.svelte';
 
@@ -39,6 +40,14 @@
   }
 
   $: sampleConfig = generateGameConfig(gridSize, minWordLength, gameTime);
+  $: gridSelectOptions = gridOptions.map((option) => ({
+    label: `${option}x${option}`,
+    value: option,
+  }));
+  $: minWordLengthSelectOptions = minWordLengthOptions.map((option) => ({
+    label: String(option),
+    value: option,
+  }));
 
   function startGame() {
     validationError = '';
@@ -82,32 +91,20 @@
     <section class="setup-panel">
       <h2>Regole</h2>
       <div class="field-grid">
-        <label>
+        <div class="field">
           <span>Dimensione</span>
-          <select bind:value={gridSize}>
-            {#each gridOptions as option}
-              <option value={option}>{option}x{option}</option>
-            {/each}
-          </select>
-        </label>
+          <CustomSelect bind:value={gridSize} options={gridSelectOptions} ariaLabel="Dimensione griglia" />
+        </div>
 
-        <label>
+        <div class="field">
           <span>Lunghezza minima</span>
-          <select bind:value={minWordLength}>
-            {#each minWordLengthOptions as option}
-              <option value={option}>{option}</option>
-            {/each}
-          </select>
-        </label>
+          <CustomSelect bind:value={minWordLength} options={minWordLengthSelectOptions} ariaLabel="Lunghezza minima" />
+        </div>
 
-        <label>
+        <div class="field">
           <span>Durata</span>
-          <select bind:value={gameTime}>
-            {#each timeOptions as option}
-              <option value={option.value}>{option.label}</option>
-            {/each}
-          </select>
-        </label>
+          <CustomSelect bind:value={gameTime} options={timeOptions} ariaLabel="Durata partita" />
+        </div>
       </div>
     </section>
 
@@ -244,23 +241,12 @@
     gap: 0.8rem;
   }
 
-  label {
+  .field {
     display: grid;
     gap: 0.35rem;
     color: var(--muted);
     font-size: 0.85rem;
     font-weight: 700;
-  }
-
-  select {
-    width: 100%;
-    min-height: 2.6rem;
-    padding: 0 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    background: var(--surface-muted);
-    color: var(--ink);
-    font: inherit;
   }
 
   .panel-title-row {

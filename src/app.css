@@ -86,18 +86,19 @@ a:focus-visible {
 .app-main {
   --board-gap: clamp(0.24rem, 1vw, 0.38rem);
   --board-info-height: clamp(3.35rem, 7.2dvh, 4rem);
-  --context-height: clamp(16rem, 20dvh, 11.5rem);
-  --command-height: calc(3.75rem + env(safe-area-inset-bottom));
+  --min-context-height: clamp(7rem, 15dvh, 10rem);
+  --top-space: clamp(0.45rem, 13dvh, 8.5rem);
+  --command-height: calc(4.25rem + env(safe-area-inset-bottom));
   --board-size: min(
     34rem,
     calc(100vw - 1.5rem),
-    calc(100dvh - var(--board-info-height) - var(--context-height) - var(--command-height) - 2.1rem)
+    calc(100dvh - var(--top-space) - var(--board-info-height) - var(--min-context-height) - var(--command-height) - 2.4rem)
   );
 
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto var(--context-height) var(--command-height);
+  grid-template-rows: auto auto minmax(0, 1fr) var(--command-height);
   gap: 0.55rem;
   padding: 0 max(0.75rem, env(safe-area-inset-left)) 0 max(0.75rem, env(safe-area-inset-right));
 }
@@ -143,7 +144,9 @@ a:focus-visible {
 }
 
 .button.danger {
-  background: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 72%, var(--border));
+  background: color-mix(in srgb, var(--danger) 4%, var(--surface));
+  color: var(--danger);
 }
 
 .square {
@@ -189,7 +192,7 @@ a:focus-visible {
 }
 
 .top-blank {
-  min-height: 0.45rem;
+  min-height: max(var(--top-space), env(safe-area-inset-top));
 }
 
 .board-stage {
@@ -381,10 +384,19 @@ a:focus-visible {
   min-width: 0;
   min-height: 0;
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: center;
   gap: 0.6rem;
   padding: 0.25rem 0 calc(0.45rem + env(safe-area-inset-bottom));
+}
+
+.command-bar .button {
+  min-height: 2.95rem;
+  padding-inline: 1.15rem;
+}
+
+.command-bar .start-command {
+  width: min(100%, 15.5rem);
 }
 
 .toast {
@@ -405,8 +417,9 @@ a:focus-visible {
 
 @media (max-width: 560px) {
   .app-main {
-    --context-height: 8.4rem;
-    --command-height: calc(3.65rem + env(safe-area-inset-bottom));
+    --min-context-height: 8.4rem;
+    --top-space: clamp(0.45rem, 15dvh, 7.5rem);
+    --command-height: calc(4.35rem + env(safe-area-inset-bottom));
     gap: 0.45rem;
   }
 
@@ -418,17 +431,17 @@ a:focus-visible {
     gap: 0.32rem;
   }
 
-  .command-bar {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    width: min(100%, 28rem);
-    margin-inline: auto;
-    gap: 0.45rem;
-  }
+
 
   .command-bar .button {
     min-width: 0;
+    min-height: 3.05rem;
     padding-inline: 0.5rem;
+  }
+
+  .command-bar .start-command {
+    grid-column: 1 / -1;
+    justify-self: center;
   }
 
   .command-bar .square {

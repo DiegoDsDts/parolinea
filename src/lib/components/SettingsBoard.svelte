@@ -1,13 +1,10 @@
 <script lang="ts">
-  import { BookOpen, Gamepad2, Monitor, Moon, RefreshCw, Sun } from 'lucide-svelte';
-  import type { DictionaryStatus, ThemePreference } from '../types';
+  import { ArrowLeft, Monitor, Moon, Sun } from 'lucide-svelte';
+  import type { ThemePreference } from '../types';
 
   export let themePreference: ThemePreference = 'system';
-  export let dictionaryStatus: DictionaryStatus;
   export let onThemeChange: (theme: ThemePreference) => void = () => {};
-  export let onReloadDictionary: () => void = () => {};
-  export let onGame: () => void = () => {};
-  export let onInfo: () => void = () => {};
+  export let onBack: () => void = () => {};
 
   const themeOptions: Array<{ value: ThemePreference; label: string; Icon: typeof Sun }> = [
     { value: 'light', label: 'Chiaro', Icon: Sun },
@@ -30,41 +27,11 @@
     </button>
   {/each}
 
-  <section class="settings-tile status-tile">
-    <strong>{dictionaryStatus.ready ? dictionaryStatus.wordsLoaded.toLocaleString('it-IT') : '-'}</strong>
-    <span>Parole</span>
-    <small>{dictionaryStatus.ready ? 'Caricate' : 'Dizionario'}</small>
-  </section>
-
-  <button class="settings-tile" type="button" on:click={onReloadDictionary}>
-    <RefreshCw size={24} />
-    <span>Ricarica</span>
-    <small>Dizionario</small>
-  </button>
-
-  <section class="settings-tile status-tile">
-    <strong>UI</strong>
-    <span>Compatta</span>
-    <small>Layout fisso</small>
-  </section>
-
-  <button class="settings-tile" type="button" on:click={onGame}>
-    <Gamepad2 size={24} />
-    <span>Gioca</span>
+  <button class="settings-tile back-tile" type="button" on:click={onBack}>
+    <ArrowLeft size={24} />
+    <span>Indietro</span>
     <small>Home</small>
   </button>
-
-  <button class="settings-tile" type="button" on:click={onInfo}>
-    <BookOpen size={24} />
-    <span>Info</span>
-    <small>Regole</small>
-  </button>
-
-  <section class="settings-tile status-tile">
-    <strong>{themePreference}</strong>
-    <span>Attivo</span>
-    <small>Tema scelto</small>
-  </section>
 </div>
 
 <style>
@@ -103,18 +70,17 @@
     color: var(--accent-strong);
   }
 
-  .settings-tile span,
-  .settings-tile strong {
+  .back-tile {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .settings-tile span {
     min-width: 0;
     overflow-wrap: anywhere;
     font-size: clamp(0.76rem, 2.5vw, 1.02rem);
     font-weight: 850;
     line-height: 1;
-  }
-
-  .settings-tile strong {
-    font-size: clamp(0.95rem, 3vw, 1.28rem);
-    font-variant-numeric: tabular-nums;
   }
 
   .settings-tile small {

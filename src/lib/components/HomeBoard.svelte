@@ -13,6 +13,7 @@
   import type { DictionaryStatus, GameConfig } from '../types';
   import { createManualGameConfig, formatDuration, generateGameConfig } from '../services/gameConfig';
   import { createEmptyBoard } from '../services/letters';
+  import CustomSelect from './CustomSelect.svelte';
   import ImportGameModal from './ImportGameModal.svelte';
   import ManualBoardEditor from './ManualBoardEditor.svelte';
 
@@ -20,6 +21,7 @@
   export let onStart: (config: GameConfig) => void = () => {};
   export let onInfo: () => void = () => {};
   export let onSettings: () => void = () => {};
+  export let startSignal = 0;
 
   const gridOptions = [3, 4, 5, 6, 7, 8];
   const minWordLengthOptions = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -44,9 +46,23 @@
   let manualEditorOpen = false;
   let importOpen = false;
   let validationError = '';
+  let lastStartSignal = startSignal;
 
   $: if (manualBoard.length !== gridSize || manualBoard[0]?.length !== gridSize) {
     manualBoard = createEmptyBoard(gridSize);
+  }
+
+  $: gridSelectOptions = gridOptions.map((option) => ({
+    label: `${option}x${option}`,
+    value: option,
+  }));
+  $: minWordLengthSelectOptions = minWordLengthOptions.map((option) => ({
+    label: String(option),
+    value: option,
+  }));
+  $: if (startSignal !== lastStartSignal) {
+    lastStartSignal = startSignal;
+    startGame();
   }
 
   function startGame() {
@@ -77,35 +93,23 @@
 </script>
 
 <div class="home-board" aria-label="Configurazione partita">
-  <label class="board-tile field-tile">
+  <div class="board-tile field-tile">
     <Grid3X3 size={22} />
     <span>Griglia</span>
-    <select bind:value={gridSize} aria-label="Dimensione griglia">
-      {#each gridOptions as option}
-        <option value={option}>{option}x{option}</option>
-      {/each}
-    </select>
-  </label>
+    <CustomSelect bind:value={gridSize} options={gridSelectOptions} ariaLabel="Dimensione griglia" />
+  </div>
 
-  <label class="board-tile field-tile">
+  <div class="board-tile field-tile">
     <Type size={22} />
     <span>Minima</span>
-    <select bind:value={minWordLength} aria-label="Lunghezza minima">
-      {#each minWordLengthOptions as option}
-        <option value={option}>{option}</option>
-      {/each}
-    </select>
-  </label>
+    <CustomSelect bind:value={minWordLength} options={minWordLengthSelectOptions} ariaLabel="Lunghezza minima" />
+  </div>
 
-  <label class="board-tile field-tile">
+  <div class="board-tile field-tile">
     <Clock3 size={22} />
     <span>Tempo</span>
-    <select bind:value={gameTime} aria-label="Durata partita">
-      {#each timeOptions as option}
-        <option value={option.value}>{option.label}</option>
-      {/each}
-    </select>
-  </label>
+    <CustomSelect bind:value={gameTime} options={timeOptions} ariaLabel="Durata partita" />
+  </div>
 
   <div class="board-tile mode-tile">
     <Shuffle size={22} />
@@ -218,39 +222,30 @@
     line-height: 1.1;
   }
 
-  .field-tile select {
-    width: min(100%, 5.8rem);
-    min-height: 1.9rem;
-    padding: 0 0.4rem;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface-muted);
-    color: var(--ink);
-    font: inherit;
-    font-size: clamp(0.72rem, 2.1vw, 0.9rem);
-    font-weight: 800;
-    text-align: center;
+  .field-tile :global(.custom-select) {
+    width: min(100%, 6.8rem);
   }
 
   .mini-toggle {
-    width: min(100%, 6.8rem);
+    width: min(100%, 7.35rem);
     display: grid;
     grid-template-columns: 1fr 1fr;
-    padding: 0.14rem;
+    padding: 0.18rem;
     border: 1px solid var(--border);
-    border-radius: 7px;
+    border-radius: 8px;
     background: var(--surface-muted);
+    margin-top: 0.4rem;
   }
 
   .mini-toggle button {
     min-width: 0;
-    min-height: 1.65rem;
+    min-height: 2.15rem;
     border: 0;
-    border-radius: 5px;
+    border-radius: 6px;
     background: transparent;
     color: var(--muted);
     font: inherit;
-    font-size: clamp(0.62rem, 2vw, 0.76rem);
+    font-size: clamp(0.78rem, 2.1vw, 0.9rem);
     font-weight: 850;
     cursor: pointer;
   }
@@ -258,6 +253,12 @@
   .mini-toggle button.active {
     background: var(--accent);
     color: white;
+  }
+
+  @media (max-width: 560px) {
+    .mini-toggle button {
+      min-height: 2.45rem;
+    }
   }
 
   .start-tile {
