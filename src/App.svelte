@@ -43,6 +43,7 @@
   let timerResetKey = 0;
   let feedbackTimeout: number | null = null;
   let submissionVersion = 0;
+  let lastValidWordIndices: number[] | null = null;
   let selectedDefinitionWord = '';
   let definitionOpen = false;
   let toastMessage = '';
@@ -142,6 +143,7 @@
     foundWords = new Set();
     foundWordsList = [];
     allSolutionsList = [];
+    lastValidWordIndices = null;
     gameActive = false;
     isPaused = false;
     calculationProgress = 0;
@@ -235,11 +237,33 @@
     currentWord = '';
   }
 
+  function handleDiceTap(index: number): boolean {
+    if (!gameConfig || !gameActive || isPaused || !lastValidWordIndices || lastValidWordIndices.length < 2) {
+      return false;
+    }
+
+    const previousLastIndex = lastValidWordIndices[lastValidWordIndices.length - 1];
+    const previousPenultimateIndex = lastValidWordIndices[lastValidWordIndices.length - 2];
+    if (previousPenultimateIndex === undefined || previousLastIndex === undefined) return false;
+    if (index === previousLastIndex || !isAdjacent(previousPenultimateIndex, index)) return false;
+
+    const nextIndices = [...lastValidWordIndices.slice(0, -1), index];
+    const reusedTile = nextIndices.slice(0, -1).includes(index);
+    if (reusedTile) return false;
+
+    selectedIndices = nextIndices;
+    updateCurrentWord(selectedIndices);
+    submitCurrentWord();
+    return true;
+  }
+
   async function submitCurrentWord() {
     if (!gameConfig) return;
     const version = submissionVersion + 1;
     submissionVersion = version;
     const submittedWord = currentWord.toLowerCase();
+    const submittedIndices = [...selectedIndices];
+    lastValidWordIndices = null;
 
     try {
       const isValid = await dictionaryClient.checkWord(submittedWord);
@@ -252,6 +276,7 @@
           const score = getWordScore(submittedWord);
           foundWords = new Set(foundWords).add(submittedWord);
           foundWordsList = sortWords([...foundWordsList, { word: submittedWord, score }]);
+          lastValidWordIndices = submittedIndices;
           feedbackType = 'word-valid';
         }
       } else {
@@ -465,6 +490,7 @@
                 onDiceSelectStart={handleDicePress}
                 onDiceSelectMove={handleDiceMove}
                 onDiceSelectEnd={handleDiceRelease}
+                onDiceTap={handleDiceTap}
               />
             </div>
           {:else if gameMode === 'recap' && gameConfig}

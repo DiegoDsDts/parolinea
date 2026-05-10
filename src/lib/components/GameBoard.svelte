@@ -9,12 +9,18 @@
   export let onDiceSelectStart: (index: number) => void = () => {};
   export let onDiceSelectMove: (index: number) => void = () => {};
   export let onDiceSelectEnd: () => void = () => {};
+  export let onDiceTap: (index: number) => boolean = () => false;
 
   const DRAG_CORNER_DEAD_ZONE_RATIO = 0.28;
   const DRAG_EDGE_DEAD_ZONE_RATIO = 0.08;
+  const TAP_MOVE_TOLERANCE_PX = 8;
   const TILE_LETTER_SIZE_RATIO = 0.50;
 
   let dragging = false;
+  let pointerStartIndex: number | null = null;
+  let pointerStartX = 0;
+  let pointerStartY = 0;
+  let pointerMoved = false;
   let tileFont = '1rem';
 
   $: selectedSet = new Set(selectedIndices);
@@ -122,6 +128,10 @@
     if (index === null) return;
 
     dragging = true;
+    pointerStartIndex = index;
+    pointerStartX = event.clientX;
+    pointerStartY = event.clientY;
+    pointerMoved = false;
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     onDiceSelectStart(index);
     event.preventDefault();
@@ -129,6 +139,13 @@
 
   function handlePointerMove(event: PointerEvent) {
     if (!dragging || isPaused) return;
+    if (
+      Math.abs(event.clientX - pointerStartX) > TAP_MOVE_TOLERANCE_PX ||
+      Math.abs(event.clientY - pointerStartY) > TAP_MOVE_TOLERANCE_PX
+    ) {
+      pointerMoved = true;
+    }
+
     const index = indexFromPoint(event);
     if (index !== null) onDiceSelectMove(index);
     event.preventDefault();
@@ -136,7 +153,24 @@
 
   function handlePointerEnd(event: PointerEvent) {
     if (!dragging) return;
+    const tapIndex = !pointerMoved ? pointerStartIndex : null;
+
     dragging = false;
+    pointerStartIndex = null;
+    (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+    if (tapIndex !== null && onDiceTap(tapIndex)) {
+      event.preventDefault();
+      return;
+    }
+
+    onDiceSelectEnd();
+    event.preventDefault();
+  }
+
+  function handlePointerCancel(event: PointerEvent) {
+    if (!dragging) return;
+    dragging = false;
+    pointerStartIndex = null;
     (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
     onDiceSelectEnd();
     event.preventDefault();
@@ -151,7 +185,7 @@
   on:pointerdown={handlePointerDown}
   on:pointermove={handlePointerMove}
   on:pointerup={handlePointerEnd}
-  on:pointercancel={handlePointerEnd}
+  on:pointercancel={handlePointerCancel}
   role="grid"
   aria-label="Griglia di gioco"
   tabindex="0"
