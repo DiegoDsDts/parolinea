@@ -3,6 +3,11 @@ export type ActiveTab = 'game' | 'info' | 'settings';
 export type FeedbackType = 'word-valid' | 'word-duplicate' | 'word-invalid' | null;
 export type ThemePreference = 'light' | 'dark' | 'system';
 export type EffectiveTheme = 'light' | 'dark';
+export type WordQuantityMode = 'random' | 'low' | 'medium' | 'high';
+
+export interface StartGameOptions {
+  wordQuantityMode?: WordQuantityMode;
+}
 
 export interface GameConfig {
   grid_size: string;

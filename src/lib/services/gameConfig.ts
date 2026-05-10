@@ -1,5 +1,10 @@
-import type { GameConfig } from '../types';
+import type { GameConfig, WordQuantityMode } from '../types';
 import { createRandomBoard } from './letters';
+
+export interface SolutionScoreRange {
+  min: number;
+  max: number | null;
+}
 
 export function parseGridSize(gridSize: string): number {
   const parts = gridSize.toLowerCase().split('x');
@@ -36,6 +41,29 @@ export function createManualGameConfig(
     duration_sec: gameDuration,
     board_letters: normalizeBoard(boardLetters),
   };
+}
+
+export function getSolutionScoreRange(
+  mode: WordQuantityMode,
+  gridSize: number,
+  minWordLength: number,
+): SolutionScoreRange | null {
+  if (mode === 'random') return null;
+
+  const lengthFactor = Math.max(0.25, 8 - minWordLength);
+  const baseScore = Math.max(80, Math.round(gridSize ** 4 * lengthFactor * 4));
+  const lowMax = Math.round(baseScore * 0.7);
+  const mediumMax = Math.round(baseScore * 1.4);
+
+  if (mode === 'low') return { min: 0, max: lowMax };
+  if (mode === 'medium') return { min: lowMax + 1, max: mediumMax };
+  return { min: mediumMax + 1, max: null };
+}
+
+export function formatSolutionScoreRange(range: SolutionScoreRange | null): string {
+  if (!range) return 'Qualsiasi';
+  if (range.max === null) return `>=${range.min.toLocaleString('it-IT')} pt`;
+  return `${range.min.toLocaleString('it-IT')}-${range.max.toLocaleString('it-IT')} pt`;
 }
 
 export function normalizeBoard(board: string[][]): string[][] {

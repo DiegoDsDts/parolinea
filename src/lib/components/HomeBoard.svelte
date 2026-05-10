@@ -4,21 +4,26 @@
     Clock3,
     Download,
     Edit3,
+    Gauge,
     Grid3X3,
-    Play,
     Settings,
     Shuffle,
     Type,
   } from 'lucide-svelte';
-  import type { DictionaryStatus, GameConfig } from '../types';
-  import { createManualGameConfig, formatDuration, generateGameConfig } from '../services/gameConfig';
+  import type { DictionaryStatus, GameConfig, StartGameOptions, WordQuantityMode } from '../types';
+  import {
+    createManualGameConfig,
+    formatSolutionScoreRange,
+    generateGameConfig,
+    getSolutionScoreRange,
+  } from '../services/gameConfig';
   import { createEmptyBoard } from '../services/letters';
   import CustomSelect from './CustomSelect.svelte';
   import ImportGameModal from './ImportGameModal.svelte';
   import ManualBoardEditor from './ManualBoardEditor.svelte';
 
   export let dictionaryStatus: DictionaryStatus;
-  export let onStart: (config: GameConfig) => void = () => {};
+  export let onStart: (config: GameConfig, options?: StartGameOptions) => void = () => {};
   export let onInfo: () => void = () => {};
   export let onSettings: () => void = () => {};
   export let startSignal = 0;
@@ -37,10 +42,17 @@
     { label: '30m', value: 1800 },
     { label: '60m', value: 3600 },
   ];
+  const wordQuantityOptions: Array<{ label: string; value: WordQuantityMode }> = [
+    { label: 'Random', value: 'random' },
+    { label: 'Basso', value: 'low' },
+    { label: 'Medio', value: 'medium' },
+    { label: 'Alto', value: 'high' },
+  ];
 
   let gridSize = 5;
   let gameTime = 0;
   let minWordLength = 5;
+  let wordQuantityMode: WordQuantityMode = 'random';
   let manualMode = false;
   let manualBoard = createEmptyBoard(gridSize);
   let manualEditorOpen = false;
@@ -60,6 +72,9 @@
     label: String(option),
     value: option,
   }));
+  $: selectedScoreRange = manualMode ? null : getSolutionScoreRange(wordQuantityMode, gridSize, minWordLength);
+  $: selectedScoreRangeLabel = manualMode ? 'Solo auto' : formatSolutionScoreRange(selectedScoreRange);
+  $: quantityDetailLabel = validationError || selectedScoreRangeLabel;
   $: if (startSignal !== lastStartSignal) {
     lastStartSignal = startSignal;
     startGame();
@@ -67,6 +82,11 @@
 
   function startGame() {
     validationError = '';
+
+    if (!dictionaryStatus.ready) {
+      validationError = 'Dizionario';
+      return;
+    }
 
     if (manualMode) {
       const hasMissingCells = manualBoard.some((row) => row.some((cell) => !cell));
@@ -80,7 +100,9 @@
       ? createManualGameConfig(gridSize, minWordLength, gameTime, manualBoard)
       : generateGameConfig(gridSize, minWordLength, gameTime);
 
-    onStart(config);
+    onStart(config, {
+      wordQuantityMode: manualMode ? 'random' : wordQuantityMode,
+    });
   }
 
   function saveManualBoard(board: string[][]) {
@@ -149,16 +171,12 @@
     <small>Tema</small>
   </button>
 
-  <button
-    class="board-tile start-tile"
-    type="button"
-    disabled={!dictionaryStatus.ready}
-    on:click={startGame}
-  >
-    <Play size={26} />
-    <span>Gioca</span>
-    <small>{validationError || (dictionaryStatus.ready ? formatDuration(gameTime) : 'Dizionario')}</small>
-  </button>
+  <div class="board-tile field-tile quantity-tile">
+    <Gauge size={23} />
+    <span>Parole</span>
+    <CustomSelect bind:value={wordQuantityMode} options={wordQuantityOptions} ariaLabel="Quantita parole" />
+    <small>{quantityDetailLabel}</small>
+  </div>
 </div>
 
 <ManualBoardEditor
@@ -261,9 +279,24 @@
     }
   }
 
-  .start-tile {
+  .quantity-tile {
+    gap: 0.24rem;
     border-color: color-mix(in srgb, var(--accent) 42%, var(--tile-border));
     background: color-mix(in srgb, var(--accent) 10%, var(--tile));
     color: var(--accent-strong);
+  }
+
+  .quantity-tile :global(.custom-select) {
+    margin-top: 0.12rem;
+  }
+
+  .quantity-tile :global(.select-trigger) {
+    min-height: 2.2rem;
+  }
+
+  @media (max-width: 560px) {
+    .quantity-tile :global(.select-trigger) {
+      min-height: 2.35rem;
+    }
   }
 </style>

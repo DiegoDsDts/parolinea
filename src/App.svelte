@@ -12,7 +12,12 @@
   import SettingsBoard from './lib/components/SettingsBoard.svelte';
   import WordList from './lib/components/WordList.svelte';
   import { dictionaryClient, dictionaryStatus } from './lib/services/dictionaryClient';
-  import { generateGameConfig, parseGridSize } from './lib/services/gameConfig';
+  import {
+    generateGameConfig,
+    getSolutionScoreRange,
+    parseGridSize,
+    type SolutionScoreRange,
+  } from './lib/services/gameConfig';
   import { getWordScore, sortWords } from './lib/services/scoring';
   import type {
     ActiveTab,
@@ -20,11 +25,13 @@
     FeedbackType,
     GameConfig,
     GameMode,
+    StartGameOptions,
     ThemePreference,
     WordItem,
   } from './lib/types';
 
   const THEME_STORAGE_KEY = 'parolinea/theme-preference';
+  const TARGETED_BOARD_ATTEMPT_LIMIT = 40;
 
   let activeTab: ActiveTab = 'game';
   let gameMode: GameMode = 'config';
@@ -40,6 +47,8 @@
   let isPaused = false;
   let calculationProgress = 0;
   let calculationWordsFound = 0;
+  let generationAttempt = 0;
+  let generationTargetRange: SolutionScoreRange | null = null;
   let timerResetKey = 0;
   let feedbackTimeout: number | null = null;
   let submissionVersion = 0;
@@ -55,6 +64,7 @@
   let confirmAction: (() => void) | null = null;
   let confirmShouldResume = false;
   let homeStartSignal = 0;
+  let generationVersion = 0;
 
   let themePreference: ThemePreference = 'system';
   let systemTheme: EffectiveTheme = 'light';
@@ -79,7 +89,7 @@
   $: loadingTitle = gameMode === 'loading' ? 'Creazione dello schema' : 'Avvio di Parolinea';
   $: loadingDetail =
     gameMode === 'loading'
-      ? `Analisi soluzioni: ${calculationWordsFound.toLocaleString('it-IT')} parole candidate`
+      ? `${generationAttempt > 1 ? `Tentativo ${generationAttempt}: ` : ''}Analisi soluzioni: ${calculationWordsFound.toLocaleString('it-IT')} parole candidate${generationTargetRange ? ' nel range scelto' : ''}`
       : $dictionaryStatus.wordsLoaded > 0
         ? `${$dictionaryStatus.wordsLoaded.toLocaleString('it-IT')} parole caricate`
         : 'Caricamento dizionario italiano';
@@ -148,29 +158,87 @@
     isPaused = false;
     calculationProgress = 0;
     calculationWordsFound = 0;
+    generationAttempt = 0;
+    generationTargetRange = null;
   }
 
-  async function startNewGame(config: GameConfig) {
+  function getSolutionScore(words: WordItem[]): number {
+    return words.reduce((sum, item) => sum + item.score, 0);
+  }
+
+  function isScoreInRange(score: number, range: SolutionScoreRange | null): boolean {
+    if (!range) return true;
+    return score >= range.min && (range.max === null || score <= range.max);
+  }
+
+  function getScoreDistanceFromRange(score: number, range: SolutionScoreRange): number {
+    if (score < range.min) return range.min - score;
+    if (range.max !== null && score > range.max) return score - range.max;
+    return 0;
+  }
+
+  async function startNewGame(config: GameConfig, options: StartGameOptions = {}) {
     dictionaryClient.cancelSolve();
     resetRoundState();
-    gameConfig = config;
-    board = config.board_letters;
+    const currentGenerationVersion = generationVersion + 1;
+    generationVersion = currentGenerationVersion;
     gameMode = 'loading';
     activeTab = 'game';
 
     try {
       const gridSize = parseGridSize(config.grid_size);
-      const solutions = await dictionaryClient.solveBoard(
-        config.board_letters.flat(),
-        gridSize,
-        config.min_word_length,
-        ({ progress, wordsFound }) => {
-          calculationProgress = progress;
-          calculationWordsFound = wordsFound;
-        },
-      );
+      generationTargetRange = getSolutionScoreRange(options.wordQuantityMode ?? 'random', gridSize, config.min_word_length);
+      const maxAttempts = generationTargetRange ? TARGETED_BOARD_ATTEMPT_LIMIT : 1;
+      let selectedConfig = config;
+      let selectedSolutions: WordItem[] = [];
+      let bestCandidate: { config: GameConfig; solutions: WordItem[]; distance: number } | null = null;
 
-      allSolutionsList = solutions;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        generationAttempt = attempt;
+        calculationProgress = 0;
+        calculationWordsFound = 0;
+
+        const candidateConfig =
+          attempt === 1
+            ? config
+            : generateGameConfig(gridSize, config.min_word_length, config.duration_sec);
+        const solutions = await dictionaryClient.solveBoard(
+          candidateConfig.board_letters.flat(),
+          gridSize,
+          candidateConfig.min_word_length,
+          ({ progress, wordsFound }) => {
+            calculationProgress = progress;
+            calculationWordsFound = wordsFound;
+          },
+        );
+
+        if (generationVersion !== currentGenerationVersion) return;
+
+        const possibleScore = getSolutionScore(solutions);
+        if (isScoreInRange(possibleScore, generationTargetRange)) {
+          selectedConfig = candidateConfig;
+          selectedSolutions = solutions;
+          bestCandidate = null;
+          break;
+        }
+
+        if (generationTargetRange) {
+          const distance = getScoreDistanceFromRange(possibleScore, generationTargetRange);
+          if (!bestCandidate || distance < bestCandidate.distance) {
+            bestCandidate = { config: candidateConfig, solutions, distance };
+          }
+        }
+      }
+
+      if (bestCandidate) {
+        selectedConfig = bestCandidate.config;
+        selectedSolutions = bestCandidate.solutions;
+        showToast('Range non trovato: avvio lo schema piu vicino.');
+      }
+
+      gameConfig = selectedConfig;
+      board = selectedConfig.board_letters;
+      allSolutionsList = selectedSolutions;
       gameMode = 'play';
       gameActive = true;
       isPaused = false;
