@@ -61,7 +61,12 @@
     background: var(--tile);
     color: var(--ink);
     box-shadow: var(--shadow-sm);
+    font: inherit;
     text-align: center;
+    transition:
+      transform 80ms ease,
+      border-color 120ms ease,
+      background 120ms ease;
   }
 
   .score-tile {
@@ -73,6 +78,12 @@
 
   button.info-tile {
     cursor: pointer;
+  }
+
+  button.info-tile:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--tile-border));
+    background: color-mix(in srgb, var(--accent) 8%, var(--tile));
   }
 
   h2,

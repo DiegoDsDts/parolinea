@@ -57,11 +57,22 @@
     background: var(--tile);
     color: var(--ink);
     box-shadow: var(--shadow-sm);
+    font: inherit;
     text-align: center;
+    transition:
+      transform 80ms ease,
+      border-color 120ms ease,
+      background 120ms ease;
   }
 
   button.settings-tile {
     cursor: pointer;
+  }
+
+  button.settings-tile:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--tile-border));
+    background: color-mix(in srgb, var(--accent) 8%, var(--tile));
   }
 
   button.settings-tile.active {
