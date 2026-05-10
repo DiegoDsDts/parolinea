@@ -128,7 +128,7 @@
     gap: 0.35rem;
     padding: 0 0.68rem 0 0.78rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0;
     background: color-mix(in srgb, var(--surface-muted) 86%, var(--surface));
     color: var(--ink);
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18);
@@ -171,7 +171,7 @@
     overflow: auto;
     padding: 0.3rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--surface);
     box-shadow: var(--shadow-lg);
   }
@@ -185,7 +185,7 @@
     gap: 0.4rem;
     padding: 0 0.68rem;
     border: 0;
-    border-radius: 7px;
+    border-radius: 0;
     background: transparent;
     color: var(--ink);
     font: inherit;

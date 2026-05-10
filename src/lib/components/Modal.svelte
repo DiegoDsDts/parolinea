@@ -60,7 +60,7 @@
     flex-direction: column;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--surface);
     box-shadow: var(--shadow-lg);
     animation: modal-enter 140ms ease-out;

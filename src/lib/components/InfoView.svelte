@@ -73,7 +73,7 @@
   section {
     padding: 1rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--surface);
     box-shadow: var(--shadow-sm);
   }

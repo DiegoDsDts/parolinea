@@ -125,7 +125,7 @@
   .score-table strong {
     min-width: 0;
     padding: 0.18rem 0.32rem;
-    border-radius: 4px;
+    border-radius: 0;
     background: var(--surface-muted);
   }
 

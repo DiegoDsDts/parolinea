@@ -207,7 +207,7 @@
     flex: 0 0 auto;
     padding: 0.45rem 0.65rem;
     border: 1px solid var(--border);
-    border-radius: 999px;
+    border-radius: 0;
     color: var(--muted);
     background: var(--surface);
     font-size: 0.82rem;
@@ -231,7 +231,7 @@
     gap: 0.9rem;
     padding: 1rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--surface);
     box-shadow: var(--shadow-sm);
   }
@@ -260,7 +260,7 @@
     display: inline-flex;
     padding: 0.18rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--surface-muted);
   }
 
@@ -271,7 +271,7 @@
     gap: 0.35rem;
     padding: 0 0.6rem;
     border: 0;
-    border-radius: 6px;
+    border-radius: 0;
     background: transparent;
     color: var(--muted);
     font: inherit;

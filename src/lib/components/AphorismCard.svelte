@@ -167,7 +167,7 @@
     overflow: hidden;
     padding: 0.85rem clamp(1.55rem, 5vw, 3rem);
     border: 2px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--surface);
     box-shadow: var(--shadow-sm);
   }

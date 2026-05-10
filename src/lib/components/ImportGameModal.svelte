@@ -98,7 +98,7 @@
     min-height: 12rem;
     padding: 0.8rem 3rem 0.8rem 0.8rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--surface-muted);
     color: var(--ink);
     font: 0.9rem ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;

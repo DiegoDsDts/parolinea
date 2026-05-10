@@ -43,7 +43,7 @@
     justify-items: center;
     padding: 1.5rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--surface);
     box-shadow: var(--shadow-lg);
   }
@@ -53,7 +53,7 @@
     height: 2.25rem;
     border: 3px solid var(--border);
     border-top-color: var(--accent);
-    border-radius: 999px;
+    border-radius: 0;
     animation: spin 0.8s linear infinite;
   }
 
@@ -76,13 +76,13 @@
     width: 100%;
     height: 0.45rem;
     overflow: hidden;
-    border-radius: 999px;
+    border-radius: 0;
     background: var(--surface-muted);
   }
 
   .progress-bar {
     height: 100%;
-    border-radius: inherit;
+    border-radius: 0;
     background: var(--accent);
     transition: width 120ms ease;
   }

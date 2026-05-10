@@ -75,7 +75,7 @@
     position: relative;
     overflow: hidden;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--surface);
     box-shadow: var(--shadow-sm);
   }
@@ -88,7 +88,7 @@
     bottom: 1px;
     z-index: 2;
     width: 2.35rem;
-    border-radius: 0 7px 7px 0;
+    border-radius: 0;
     background: linear-gradient(to right, transparent, var(--surface) 78%);
     opacity: 0;
     pointer-events: none;
@@ -133,7 +133,7 @@
     gap: 0.36rem;
     padding: 0 0.36rem;
     border: 0;
-    border-radius: 5px;
+    border-radius: 0;
     background: transparent;
     color: var(--ink);
     font: inherit;

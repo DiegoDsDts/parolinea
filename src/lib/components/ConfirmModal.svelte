@@ -41,7 +41,7 @@
     display: grid;
     place-items: center;
     border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
-    border-radius: 8px;
+    border-radius: 0;
     background: color-mix(in srgb, var(--accent) 8%, var(--surface));
     color: var(--accent-strong);
   }

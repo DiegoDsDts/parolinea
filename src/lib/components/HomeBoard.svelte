@@ -310,6 +310,10 @@
 </script>
 
 <div class="home-board" aria-label="Configurazione partita" bind:this={boardRoot}>
+  {#if openMenu}
+    <button class="menu-blur-backdrop" type="button" aria-label="Chiudi menu" on:click={closeMenu}></button>
+  {/if}
+
   <div class="tile-menu-wrap">
     <button
       class:open={openMenu === 'grid'}
@@ -477,6 +481,7 @@
   .home-board {
     width: 100%;
     height: 100%;
+    position: relative;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: repeat(3, minmax(0, 1fr));
@@ -485,10 +490,25 @@
     background: var(--tile-border);
   }
 
+  .menu-blur-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    border: 0;
+    background: rgb(247 245 239 / 0.18);
+    backdrop-filter: blur(4px);
+    cursor: default;
+    animation: blur-enter 26ms ease-out;
+  }
+
   .tile-menu-wrap {
     min-width: 0;
     min-height: 0;
     position: relative;
+  }
+
+  .tile-menu-wrap:has(.board-tile.open) {
+    z-index: 90;
   }
 
   .board-tile {
@@ -580,7 +600,7 @@
 
   .tile-menu {
     position: absolute;
-    z-index: 80;
+    z-index: 91;
     top: calc(100% + 1px);
     left: 0;
     right: 0;
@@ -590,7 +610,7 @@
     overflow: auto;
     padding: 0.28rem;
     border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
-    border-radius: 8px;
+    border-radius: 0;
     background: var(--surface);
     box-shadow: var(--shadow-lg);
   }
@@ -604,7 +624,7 @@
     gap: 0.35rem;
     padding: 0 0.62rem;
     border: 0;
-    border-radius: 6px;
+    border-radius: 0;
     background: transparent;
     color: var(--ink);
     font: inherit;
@@ -649,6 +669,18 @@
     color: var(--muted);
     font-size: 0.95rem;
     line-height: 1.45;
+  }
+
+  @keyframes blur-enter {
+    from {
+      opacity: 0;
+      backdrop-filter: blur(0);
+    }
+
+    to {
+      opacity: 1;
+      backdrop-filter: blur(4px);
+    }
   }
 
   @media (max-width: 560px) {
