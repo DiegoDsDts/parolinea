@@ -52,7 +52,7 @@
   let timerResetKey = 0;
   let feedbackTimeout: number | null = null;
   let submissionVersion = 0;
-  let lastValidWordIndices: number[] | null = null;
+  let lastSubmittedWordIndices: number[] | null = null;
   let selectedDefinitionWord = '';
   let definitionOpen = false;
   let toastMessage = '';
@@ -154,7 +154,7 @@
     foundWords = new Set();
     foundWordsList = [];
     allSolutionsList = [];
-    lastValidWordIndices = null;
+    lastSubmittedWordIndices = null;
     gameActive = false;
     isPaused = false;
     calculationProgress = 0;
@@ -318,16 +318,16 @@
   }
 
   function handleDiceTap(index: number): boolean {
-    if (!gameConfig || !gameActive || isPaused || !lastValidWordIndices || lastValidWordIndices.length < 2) {
+    if (!gameConfig || !gameActive || isPaused || !lastSubmittedWordIndices || lastSubmittedWordIndices.length < 2) {
       return false;
     }
 
-    const previousLastIndex = lastValidWordIndices[lastValidWordIndices.length - 1];
-    const previousPenultimateIndex = lastValidWordIndices[lastValidWordIndices.length - 2];
+    const previousLastIndex = lastSubmittedWordIndices[lastSubmittedWordIndices.length - 1];
+    const previousPenultimateIndex = lastSubmittedWordIndices[lastSubmittedWordIndices.length - 2];
     if (previousPenultimateIndex === undefined || previousLastIndex === undefined) return false;
     if (index === previousLastIndex || !isAdjacent(previousPenultimateIndex, index)) return false;
 
-    const nextIndices = [...lastValidWordIndices.slice(0, -1), index];
+    const nextIndices = [...lastSubmittedWordIndices.slice(0, -1), index];
     const reusedTile = nextIndices.slice(0, -1).includes(index);
     if (reusedTile) return false;
 
@@ -343,11 +343,12 @@
     submissionVersion = version;
     const submittedWord = currentWord.toLowerCase();
     const submittedIndices = [...selectedIndices];
-    lastValidWordIndices = null;
+    lastSubmittedWordIndices = null;
 
     try {
       const isValid = await dictionaryClient.checkWord(submittedWord);
       if (submissionVersion !== version) return;
+      lastSubmittedWordIndices = submittedIndices;
 
       if (isValid) {
         if (foundWords.has(submittedWord)) {
@@ -356,7 +357,6 @@
           const score = getWordScore(submittedWord);
           foundWords = new Set(foundWords).add(submittedWord);
           foundWordsList = sortWords([...foundWordsList, { word: submittedWord, score }]);
-          lastValidWordIndices = submittedIndices;
           feedbackType = 'word-valid';
         }
       } else {
