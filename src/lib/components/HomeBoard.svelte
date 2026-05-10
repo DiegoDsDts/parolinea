@@ -29,6 +29,14 @@
     label: string;
     value: T;
   };
+  type HomeSettings = {
+    gridSize: number;
+    gameTime: number;
+    minWordLength: number;
+    wordQuantityMode: WordQuantityMode;
+    manualMode: boolean;
+    manualBoard: string[][];
+  };
 
   export let dictionaryStatus: DictionaryStatus;
   export let onStart: (config: GameConfig, options?: StartGameOptions) => void = () => {};
@@ -36,6 +44,7 @@
   export let onSettings: () => void = () => {};
   export let startSignal = 0;
 
+  const HOME_SETTINGS_STORAGE_KEY = 'parolinea/home-settings';
   const gridOptions = [3, 4, 5, 6, 7, 8];
   const minWordLengthOptions = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   const timeOptions: Array<TileOption<number>> = [
@@ -94,6 +103,8 @@
   }
 
   onMount(() => {
+    loadHomeSettings();
+
     const closeFromOutside = (event: PointerEvent) => {
       if (boardRoot && !boardRoot.contains(event.target as Node)) openMenu = null;
     };
@@ -103,6 +114,7 @@
   });
 
   function toggleMenu(menu: TileMenu) {
+    saveHomeSettings();
     openMenu = openMenu === menu ? null : menu;
   }
 
@@ -110,27 +122,124 @@
     openMenu = null;
   }
 
+  function isWordQuantityMode(value: unknown): value is WordQuantityMode {
+    return wordQuantityOptions.some((option) => option.value === value);
+  }
+
+  function isManualBoard(value: unknown, expectedGridSize: number): value is string[][] {
+    return (
+      Array.isArray(value) &&
+      value.length === expectedGridSize &&
+      value.every((row) =>
+        Array.isArray(row) &&
+        row.length === expectedGridSize &&
+        row.every((cell) => typeof cell === 'string' && /^[A-Za-z]?$/.test(cell.trim())),
+      )
+    );
+  }
+
+  function normalizeManualBoard(board: string[][]): string[][] {
+    return board.map((row) => row.map((cell) => cell.trim().slice(0, 1).toUpperCase()));
+  }
+
+  function loadHomeSettings() {
+    try {
+      const rawSettings = localStorage.getItem(HOME_SETTINGS_STORAGE_KEY);
+      if (!rawSettings) return;
+
+      const settings = JSON.parse(rawSettings) as Partial<HomeSettings>;
+      if (typeof settings.gridSize === 'number' && gridOptions.includes(settings.gridSize)) {
+        gridSize = settings.gridSize;
+      }
+
+      if (typeof settings.minWordLength === 'number' && minWordLengthOptions.includes(settings.minWordLength)) {
+        minWordLength = settings.minWordLength;
+      }
+
+      if (typeof settings.gameTime === 'number' && timeOptions.some((option) => option.value === settings.gameTime)) {
+        gameTime = settings.gameTime;
+      }
+
+      if (isWordQuantityMode(settings.wordQuantityMode)) {
+        wordQuantityMode = settings.wordQuantityMode;
+      }
+
+      if (typeof settings.manualMode === 'boolean') {
+        manualMode = settings.manualMode;
+      }
+
+      manualBoard = isManualBoard(settings.manualBoard, gridSize)
+        ? normalizeManualBoard(settings.manualBoard)
+        : createEmptyBoard(gridSize);
+    } catch {
+      try {
+        localStorage.removeItem(HOME_SETTINGS_STORAGE_KEY);
+      } catch {
+        // Local storage can be unavailable in restricted browser contexts.
+      }
+    }
+  }
+
+  function saveHomeSettings() {
+    const settings: HomeSettings = {
+      gridSize,
+      gameTime,
+      minWordLength,
+      wordQuantityMode,
+      manualMode,
+      manualBoard: normalizeManualBoard(manualBoard),
+    };
+
+    try {
+      localStorage.setItem(HOME_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    } catch {
+      // Ignore storage failures: the current in-memory settings still work.
+    }
+  }
+
   function selectGridSize(value: number) {
     gridSize = value;
+    manualBoard = createEmptyBoard(value);
+    saveHomeSettings();
     closeMenu();
   }
 
   function selectMinWordLength(value: number) {
     minWordLength = value;
+    saveHomeSettings();
     closeMenu();
   }
 
   function selectGameTime(value: number) {
     gameTime = value;
+    saveHomeSettings();
     closeMenu();
   }
 
   function selectWordQuantity(value: WordQuantityMode) {
     wordQuantityMode = value;
+    saveHomeSettings();
     closeMenu();
   }
 
+  function toggleManualMode() {
+    manualMode = !manualMode;
+    saveHomeSettings();
+  }
+
+  function openInfo() {
+    saveHomeSettings();
+    onInfo();
+  }
+
+  function openSettings() {
+    saveHomeSettings();
+    onSettings();
+  }
+
   function openManualEditor() {
+    saveHomeSettings();
+
     if (!manualMode) {
       showDisabledInfo(
         'Configurazione non disponibile',
@@ -143,6 +252,8 @@
   }
 
   function openQuantityMenu() {
+    saveHomeSettings();
+
     if (manualMode) {
       showDisabledInfo(
         'Densità non disponibile',
@@ -163,6 +274,7 @@
 
   function startGame() {
     validationError = '';
+    saveHomeSettings();
 
     if (!dictionaryStatus.ready) {
       validationError = 'Dizionario';
@@ -187,10 +299,12 @@
   }
 
   function saveManualBoard(board: string[][]) {
-    manualBoard = board;
+    manualBoard = normalizeManualBoard(board);
+    saveHomeSettings();
   }
 
   function importGame(config: GameConfig) {
+    saveHomeSettings();
     onStart(config);
   }
 </script>
@@ -277,7 +391,7 @@
     {/if}
   </div>
 
-  <button class="board-tile mode-tile" type="button" on:click={() => (manualMode = !manualMode)}>
+  <button class="board-tile mode-tile" type="button" on:click={toggleManualMode}>
     <HelpCircle size={22} />
     <span>Lettere</span>
     <strong>{manualMode ? 'Manuale' : 'Random'}</strong>
@@ -331,12 +445,12 @@
 
   
 
-  <button class="board-tile action-tile" type="button" on:click={onInfo}>
+  <button class="board-tile action-tile" type="button" on:click={openInfo}>
     <BookOpen size={23} />
     <span>Info</span>
   </button>
 
-  <button class="board-tile action-tile" type="button" on:click={onSettings}>
+  <button class="board-tile action-tile" type="button" on:click={openSettings}>
     <Settings size={23} />
     <span>Opzioni</span>
   </button>
