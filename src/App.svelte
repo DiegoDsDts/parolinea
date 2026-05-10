@@ -287,7 +287,17 @@
   }
 
   function handleDiceMove(index: number) {
-    if (!gameActive || isPaused || selectedIndices.includes(index)) return;
+    if (!gameActive || isPaused) return;
+
+    const existingIndex = selectedIndices.indexOf(index);
+    if (existingIndex >= 0) {
+      if (existingIndex === selectedIndices.length - 1) return;
+
+      selectedIndices = selectedIndices.slice(0, existingIndex + 1);
+      updateCurrentWord(selectedIndices);
+      return;
+    }
+
     const lastIndex = selectedIndices[selectedIndices.length - 1];
     if (lastIndex === undefined || !isAdjacent(lastIndex, index)) return;
 
