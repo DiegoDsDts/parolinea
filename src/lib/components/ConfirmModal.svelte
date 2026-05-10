@@ -22,7 +22,7 @@
 
     <div class="confirm-actions">
       <button class="button secondary" type="button" on:click={onCancel}>{cancelLabel}</button>
-      <button class:danger class="button" type="button" on:click={onConfirm}>{confirmLabel}</button>
+      <button class:danger class:reveal={!danger} class="button" type="button" on:click={onConfirm}>{confirmLabel}</button>
     </div>
   </div>
 </Modal>

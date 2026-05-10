@@ -143,6 +143,12 @@ a:focus-visible {
   background: #6f746c;
 }
 
+.button.reveal {
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
+  background: color-mix(in srgb, var(--warning) 34%, var(--surface));
+  color: var(--ink);
+}
+
 .button.danger {
   border: 1px solid color-mix(in srgb, var(--danger) 72%, var(--border));
   background: color-mix(in srgb, var(--danger) 4%, var(--surface));
@@ -407,7 +413,7 @@ a:focus-visible {
 }
 
 .command-bar .start-command {
-  width: min(100%, 15.5rem);
+  width: min(100%, 12.5rem);
 }
 
 .toast {

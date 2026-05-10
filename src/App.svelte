@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Flag, Home, Pause, Play, RotateCcw } from 'lucide-svelte';
+  import { ArrowRightToLine, Home, Pause, Play } from 'lucide-svelte';
   import AphorismCard from './lib/components/AphorismCard.svelte';
   import ConfirmModal from './lib/components/ConfirmModal.svelte';
   import DictionaryModal from './lib/components/DictionaryModal.svelte';
@@ -65,6 +65,7 @@
   let confirmShouldResume = false;
   let homeStartSignal = 0;
   let generationVersion = 0;
+  let lastGameOptions: StartGameOptions = {};
 
   let themePreference: ThemePreference = 'system';
   let systemTheme: EffectiveTheme = 'light';
@@ -180,6 +181,7 @@
   async function startNewGame(config: GameConfig, options: StartGameOptions = {}) {
     dictionaryClient.cancelSolve();
     resetRoundState();
+    lastGameOptions = { ...options };
     const currentGenerationVersion = generationVersion + 1;
     generationVersion = currentGenerationVersion;
     gameMode = 'loading';
@@ -425,10 +427,9 @@
   function endGame(manual: boolean) {
     if (manual) {
       openConfirm({
-        title: 'Termina partita',
-        message: 'Vuoi chiudere la partita e vedere il riepilogo?',
-        confirmLabel: 'Termina',
-        danger: true,
+        title: 'Mostra soluzioni',
+        message: 'Vuoi chiudere la partita e vedere tutte le soluzioni?',
+        confirmLabel: 'Mostra',
         onConfirm: () => endGame(false),
       });
       return;
@@ -443,8 +444,13 @@
     gameMode = 'recap';
   }
 
-  function restartWithSameConfig() {
-    if (gameConfig) startNewGame(gameConfig);
+  function startNewGameWithSameSettings() {
+    if (!gameConfig) return;
+    const gridSize = parseGridSize(gameConfig.grid_size);
+    startNewGame(
+      generateGameConfig(gridSize, gameConfig.min_word_length, gameConfig.duration_sec),
+      lastGameOptions,
+    );
   }
 
   function startDefaultGame() {
@@ -615,18 +621,18 @@
             <Pause strokeWidth={1.4} />
           {/if}
         </button>
-        <button class="button danger" type="button" on:click={() => endGame(true)}>
-          <Flag size={17} />
-          Fine
+        <button class="button reveal" type="button" on:click={() => endGame(true)}>
+          <ArrowRightToLine size={19} />
+          Soluzioni
         </button>
       {:else if activeTab === 'game' && gameMode === 'recap'}
         <button class="button secondary" type="button" on:click={goHome}>
           <Home size={18} />
           Home
         </button>
-        <button class="button primary" type="button" on:click={restartWithSameConfig}>
-          <RotateCcw size={18} />
-          Rigioca
+        <button class="button primary" type="button" on:click={startNewGameWithSameSettings}>
+          <Play size={18} />
+          Prossima Partita
         </button>
       {:else}
         <button class="button primary start-command" type="button" disabled={!$dictionaryStatus.ready} on:click={startFromCommandBar}>

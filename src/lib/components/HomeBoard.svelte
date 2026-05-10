@@ -7,10 +7,9 @@
     Clock3,
     Download,
     Edit3,
-    Gauge,
     Grid3X3,
+    HelpCircle,
     Settings,
-    Shuffle,
     Type,
   } from 'lucide-svelte';
   import type { DictionaryStatus, GameConfig, StartGameOptions, WordQuantityMode } from '../types';
@@ -23,6 +22,7 @@
   import { createEmptyBoard } from '../services/letters';
   import ImportGameModal from './ImportGameModal.svelte';
   import ManualBoardEditor from './ManualBoardEditor.svelte';
+  import Modal from './Modal.svelte';
 
   type TileMenu = 'grid' | 'min' | 'time' | 'quantity';
   type TileOption<T extends string | number> = {
@@ -69,6 +69,9 @@
   let lastStartSignal = startSignal;
   let openMenu: TileMenu | null = null;
   let boardRoot: HTMLElement;
+  let disabledInfoOpen = false;
+  let disabledInfoTitle = '';
+  let disabledInfoMessage = '';
 
   $: if (manualBoard.length !== gridSize || manualBoard[0]?.length !== gridSize) {
     manualBoard = createEmptyBoard(gridSize);
@@ -85,7 +88,6 @@
   $: selectedScoreRange = manualMode ? null : getSolutionScoreRange(wordQuantityMode, gridSize, minWordLength);
   $: selectedScoreRangeLabel = manualMode ? 'Solo auto' : formatSolutionScoreRange(selectedScoreRange);
   $: quantityDetailLabel = validationError || selectedScoreRangeLabel;
-  $: nextLetterModeLabel = manualMode ? 'Auto' : 'Manuale';
   $: if (startSignal !== lastStartSignal) {
     lastStartSignal = startSignal;
     startGame();
@@ -129,8 +131,34 @@
   }
 
   function openManualEditor() {
-    manualMode = true;
+    if (!manualMode) {
+      showDisabledInfo(
+        'Configurazione non disponibile',
+        'La configurazione delle lettere è disponibile solo quando il tasto "Lettere" è impostato su Manuale.',
+      );
+      return;
+    }
+
     manualEditorOpen = true;
+  }
+
+  function openQuantityMenu() {
+    if (manualMode) {
+      showDisabledInfo(
+        'Densità non disponibile',
+        'La densità si applica solo agli schemi generati in modalità Random. Imposta "Lettere" su Random per poterla utilizzare.',
+      );
+      return;
+    }
+
+    toggleMenu('quantity');
+  }
+
+  function showDisabledInfo(title: string, message: string) {
+    openMenu = null;
+    disabledInfoTitle = title;
+    disabledInfoMessage = message;
+    disabledInfoOpen = true;
   }
 
   function startGame() {
@@ -250,51 +278,35 @@
   </div>
 
   <button class="board-tile mode-tile" type="button" on:click={() => (manualMode = !manualMode)}>
-    <Shuffle size={22} />
+    <HelpCircle size={22} />
     <span>Lettere</span>
-    <strong>{manualMode ? 'Manuale' : 'Auto'}</strong>
-    <small>Clic: {nextLetterModeLabel}</small>
+    <strong>{manualMode ? 'Manuale' : 'Random'}</strong>
   </button>
 
   <button
     class="board-tile action-tile"
+    class:soft-disabled={!manualMode}
     type="button"
+    aria-disabled={!manualMode}
     on:click={openManualEditor}
   >
     <Edit3 size={23} />
-    <span>Modifica</span>
-    <small>{manualMode ? `${gridSize}x${gridSize}` : 'Clic: Manuale'}</small>
-  </button>
-
-  <button class="board-tile action-tile" type="button" on:click={() => (importOpen = true)}>
-    <Download size={23} />
-    <span>Importa</span>
-    <small>JSON</small>
-  </button>
-
-  <button class="board-tile action-tile" type="button" on:click={onInfo}>
-    <BookOpen size={23} />
-    <span>Info</span>
-    <small>Regole</small>
-  </button>
-
-  <button class="board-tile action-tile" type="button" on:click={onSettings}>
-    <Settings size={23} />
-    <span>Opzioni</span>
-    <small>Tema</small>
+    <span>Configura</span>
   </button>
 
   <div class="tile-menu-wrap">
     <button
       class:open={openMenu === 'quantity'}
       class="board-tile choice-tile quantity-tile"
+      class:soft-disabled={manualMode}
       type="button"
       aria-haspopup="listbox"
       aria-expanded={openMenu === 'quantity'}
-      on:click={() => toggleMenu('quantity')}
+      aria-disabled={manualMode}
+      on:click={openQuantityMenu}
     >
-      <Gauge size={23} />
-      <span>Parole</span>
+      <Grid3X3 size={23} />
+      <span>Densità</span>
       <strong>{wordQuantityOptions.find((option) => option.value === wordQuantityMode)?.label}</strong>
       <small>{quantityDetailLabel}</small>
       <span class="tile-chevron"><ChevronDown size={16} /></span>
@@ -311,6 +323,23 @@
       </div>
     {/if}
   </div>
+
+  <button class="board-tile action-tile" type="button" on:click={() => (importOpen = true)}>
+    <Download size={23} />
+    <span>Importa</span>
+  </button>
+
+  
+
+  <button class="board-tile action-tile" type="button" on:click={onInfo}>
+    <BookOpen size={23} />
+    <span>Info</span>
+  </button>
+
+  <button class="board-tile action-tile" type="button" on:click={onSettings}>
+    <Settings size={23} />
+    <span>Opzioni</span>
+  </button>
 </div>
 
 <ManualBoardEditor
@@ -322,6 +351,13 @@
 />
 
 <ImportGameModal open={importOpen} onClose={() => (importOpen = false)} onImport={importGame} />
+
+<Modal open={disabledInfoOpen} title={disabledInfoTitle} onClose={() => (disabledInfoOpen = false)}>
+  <div class="disabled-info">
+    <p>{disabledInfoMessage}</p>
+    <button class="button primary" type="button" on:click={() => (disabledInfoOpen = false)}>Ok</button>
+  </div>
+</Modal>
 
 <style>
   .home-board {
@@ -376,6 +412,15 @@
   button.board-tile:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+  }
+
+  button.board-tile.soft-disabled {
+    opacity: 0.48;
+  }
+
+  button.board-tile.soft-disabled:hover {
+    border-color: var(--tile-border);
+    background: var(--tile);
   }
 
   .board-tile span {
@@ -478,12 +523,21 @@
     border-color: color-mix(in srgb, var(--selected) 28%, var(--tile-border));
   }
 
-  .mode-tile strong {
-    color: var(--ink);
-  }
-
   .quantity-tile {
     gap: 0.24rem;
+  }
+
+  .disabled-info {
+    display: grid;
+    justify-items: end;
+    gap: 1rem;
+  }
+
+  .disabled-info p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.45;
   }
 
   @media (max-width: 560px) {

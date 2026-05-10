@@ -61,7 +61,7 @@ export function getSolutionScoreRange(
 }
 
 export function formatSolutionScoreRange(range: SolutionScoreRange | null): string {
-  if (!range) return 'Qualsiasi';
+  if (!range) return '-';
   if (range.max === null) return `>=${range.min.toLocaleString('it-IT')} pt`;
   return `${range.min.toLocaleString('it-IT')}-${range.max.toLocaleString('it-IT')} pt`;
 }
