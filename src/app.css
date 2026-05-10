@@ -225,7 +225,7 @@ a:focus-visible {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(4.6rem, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 0.65rem;
 }
@@ -281,28 +281,26 @@ a:focus-visible {
 }
 
 .board-meta {
-  min-width: 0;
+  min-width: max-content;
+  max-width: 48%;
   display: grid;
   justify-items: end;
   align-content: end;
   gap: 0.28rem;
-  overflow: hidden;
   text-align: right;
 }
 
 .board-meta strong,
 .board-meta span,
 .board-meta .timer {
-  min-width: 0;
-  overflow: hidden;
+  max-width: 100%;
   line-height: 1;
-  text-overflow: ellipsis;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
 .board-meta strong {
-  font-size: clamp(0.9rem, calc(var(--board-size) * 0.036), 1.22rem);
+  font-size: clamp(0.76rem, calc(var(--board-size) * 0.033), 1.15rem);
   font-weight: 900;
 }
 
@@ -448,6 +446,14 @@ a:focus-visible {
 
   .board-info {
     gap: 0.32rem;
+  }
+
+  .board-meta {
+    max-width: 58%;
+  }
+
+  .board-meta strong {
+    font-size: clamp(0.68rem, calc(var(--board-size) * 0.029), 1rem);
   }
 
 
