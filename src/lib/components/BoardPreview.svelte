@@ -25,12 +25,14 @@
     aspect-ratio: 1;
     display: grid;
     grid-template-columns: repeat(var(--grid-size), minmax(0, 1fr));
-    gap: 0.22rem;
+    gap: 1px;
+    padding: 1px;
+    background: var(--tile-border);
   }
 
   .board-preview.compact {
     width: min(100%, 9rem);
-    gap: 0.16rem;
+    gap: 1px;
   }
 
   .preview-tile {
@@ -38,8 +40,8 @@
     place-items: center;
     min-width: 0;
     aspect-ratio: 1;
-    border: 1px solid var(--tile-border);
-    border-radius: 5px;
+    border: 0;
+    border-radius: 0;
     background: var(--tile);
     color: var(--ink);
     font-size: var(--tile-font);

@@ -338,7 +338,9 @@ a:focus-visible {
 .static-board {
   display: grid;
   grid-template-columns: repeat(var(--grid-size), minmax(0, 1fr));
-  gap: var(--board-gap);
+  gap: 1px;
+  padding: 1px;
+  background: var(--tile-border);
 }
 
 .static-tile {
@@ -346,11 +348,11 @@ a:focus-visible {
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  border: 1px solid var(--tile-border);
-  border-radius: 6px;
+  border: 0;
+  border-radius: 0;
   background: var(--tile);
   color: var(--ink);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   font-size: clamp(1rem, calc(var(--board-size) / var(--grid-size) * 0.45), 4rem);
   font-weight: 850;
   line-height: 1;

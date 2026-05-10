@@ -217,8 +217,9 @@
     aspect-ratio: 1;
     display: grid;
     grid-template-columns: repeat(var(--grid-size), minmax(0, 1fr));
-    gap: 0.38rem;
-    padding: 0.15rem;
+    gap: 1px;
+    padding: 1px;
+    background: var(--tile-border);
     touch-action: none;
     user-select: none;
   }
@@ -229,45 +230,39 @@
     aspect-ratio: 1;
     display: grid;
     place-items: center;
-    border: 1.5px solid var(--tile-border);
-    border-radius: 6px;
+    border: 0;
+    border-radius: 0;
     background: var(--tile);
     color: var(--ink);
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
     font-size: var(--tile-font);
     font-weight: 850;
     line-height: 1;
     text-transform: uppercase;
     cursor: pointer;
     transition:
-      transform 80ms ease,
       background 80ms ease,
-      color 80ms ease,
-      border-color 80ms ease;
+      color 80ms ease;
   }
 
   .tile:hover {
-    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--accent) 5%, var(--tile));
   }
 
   .tile.selected {
-    border-color: var(--selected);
     background: var(--selected);
     color: white;
   }
 
   .tile.valid {
-    border-color: var(--success);
     background: var(--success);
   }
 
   .tile.duplicate {
-    border-color: var(--warning);
     background: var(--warning);
   }
 
   .tile.invalid {
-    border-color: var(--danger);
     background: var(--danger);
   }
 
@@ -278,7 +273,7 @@
 
   @media (max-width: 520px) {
     .board {
-      gap: 0.28rem;
+      gap: 1px;
     }
   }
 </style>

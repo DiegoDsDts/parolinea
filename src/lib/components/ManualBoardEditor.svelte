@@ -85,14 +85,16 @@
     margin-inline: auto;
     display: grid;
     grid-template-columns: repeat(var(--grid-size), minmax(2.2rem, 1fr));
-    gap: 0.45rem;
+    gap: 1px;
+    padding: 1px;
+    background: var(--tile-border);
   }
 
   input {
     width: 100%;
     aspect-ratio: 1;
-    border: 1px solid var(--tile-border);
-    border-radius: 6px;
+    border: 0;
+    border-radius: 0;
     background: var(--tile);
     color: var(--ink);
     font: inherit;
@@ -103,9 +105,8 @@
   }
 
   input:focus {
-    border-color: var(--accent);
-    outline: 2px solid color-mix(in srgb, var(--accent) 28%, transparent);
-    outline-offset: 1px;
+    outline: 2px solid color-mix(in srgb, var(--accent) 48%, transparent);
+    outline-offset: -2px;
   }
 
   .modal-actions {
@@ -117,7 +118,7 @@
 
   @media (max-width: 520px) {
     .manual-grid {
-      gap: 0.32rem;
+      gap: 1px;
       grid-template-columns: repeat(var(--grid-size), minmax(1.8rem, 1fr));
     }
 

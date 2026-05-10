@@ -36,6 +36,9 @@
     <h2>Indietro</h2>
     <p>Home</p>
   </button>
+
+  <div class="info-tile empty-tile empty-tile-a" aria-hidden="true"></div>
+  <div class="info-tile empty-tile empty-tile-b" aria-hidden="true"></div>
 </div>
 
 <style>
@@ -45,7 +48,9 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: repeat(3, minmax(0, 1fr));
-    gap: var(--board-gap);
+    gap: 1px;
+    padding: 1px;
+    background: var(--tile-border);
   }
 
   .info-tile {
@@ -56,16 +61,14 @@
     align-content: center;
     gap: 0.34rem;
     padding: clamp(0.42rem, 1.8vw, 0.72rem);
-    border: 1px solid var(--tile-border);
-    border-radius: 6px;
+    border: 0;
+    border-radius: 0;
     background: var(--tile);
     color: var(--ink);
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
     font: inherit;
     text-align: center;
     transition:
-      transform 80ms ease,
-      border-color 120ms ease,
       background 120ms ease;
   }
 
@@ -81,8 +84,6 @@
   }
 
   button.info-tile:hover {
-    transform: translateY(-1px);
-    border-color: color-mix(in srgb, var(--accent) 42%, var(--tile-border));
     background: color-mix(in srgb, var(--accent) 8%, var(--tile));
   }
 
@@ -141,6 +142,21 @@
 
   .back-tile {
     grid-column: 1;
+    grid-row: 3;
+  }
+
+  .empty-tile {
+    pointer-events: none;
+    background: color-mix(in srgb, var(--tile) 68%, var(--surface-muted));
+  }
+
+  .empty-tile-a {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .empty-tile-b {
+    grid-column: 3;
     grid-row: 3;
   }
 </style>

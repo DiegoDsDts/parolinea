@@ -480,7 +480,9 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: repeat(3, minmax(0, 1fr));
-    gap: var(--board-gap);
+    gap: 1px;
+    padding: 1px;
+    background: var(--tile-border);
   }
 
   .tile-menu-wrap {
@@ -499,16 +501,14 @@
     align-content: center;
     gap: 0.38rem;
     padding: clamp(0.42rem, 1.8vw, 0.72rem);
-    border: 1px solid var(--tile-border);
-    border-radius: 6px;
+    border: 0;
+    border-radius: 0;
     background: var(--tile);
     color: var(--ink);
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
     font: inherit;
     text-align: center;
     transition:
-      transform 80ms ease,
-      border-color 120ms ease,
       background 120ms ease;
   }
 
@@ -518,8 +518,6 @@
 
   button.board-tile:hover:not(:disabled),
   button.board-tile.open {
-    transform: translateY(-1px);
-    border-color: color-mix(in srgb, var(--accent) 48%, var(--tile-border));
     background: color-mix(in srgb, var(--accent) 8%, var(--tile));
   }
 
@@ -533,7 +531,6 @@
   }
 
   button.board-tile.soft-disabled:hover {
-    border-color: var(--tile-border);
     background: var(--tile);
   }
 
@@ -584,7 +581,7 @@
   .tile-menu {
     position: absolute;
     z-index: 80;
-    top: calc(100% + var(--board-gap));
+    top: calc(100% + 1px);
     left: 0;
     right: 0;
     display: grid;
@@ -634,7 +631,7 @@
   }
 
   .mode-tile {
-    border-color: color-mix(in srgb, var(--selected) 28%, var(--tile-border));
+    background: color-mix(in srgb, var(--selected) 4%, var(--tile));
   }
 
   .quantity-tile {
