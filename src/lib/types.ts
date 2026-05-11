@@ -16,6 +16,11 @@ export interface GameConfig {
   board_letters: string[][];
 }
 
+export interface BoardCell {
+  id: string;
+  letter: string;
+}
+
 export interface WordItem {
   word: string;
   score: number;

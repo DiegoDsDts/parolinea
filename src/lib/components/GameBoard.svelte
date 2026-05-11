@@ -1,7 +1,8 @@
 <script lang="ts">
-  import type { FeedbackType } from '../types';
+  import { flip } from 'svelte/animate';
+  import type { BoardCell, FeedbackType } from '../types';
 
-  export let board: string[][] = [];
+  export let boardCells: BoardCell[][] = [];
   export let selectedIndices: number[] = [];
   export let feedbackType: FeedbackType = null;
   export let gridSize = 4;
@@ -24,6 +25,7 @@
   let tileFont = '1rem';
 
   $: selectedSet = new Set(selectedIndices);
+  $: cells = boardCells.flat();
 
   function measureTileFont(node: HTMLElement, _layoutKey: string) {
     let frame = 0;
@@ -181,7 +183,7 @@
   class="board"
   class:paused={isPaused}
   style={`--grid-size: ${gridSize}; --tile-font: ${tileFont};`}
-  use:measureTileFont={`${gridSize}:${board.length}`}
+  use:measureTileFont={`${gridSize}:${boardCells.length}`}
   on:pointerdown={handlePointerDown}
   on:pointermove={handlePointerMove}
   on:pointerup={handlePointerEnd}
@@ -190,49 +192,84 @@
   aria-label="Griglia di gioco"
   tabindex="0"
 >
-  {#each board as row, rowIndex}
-    {#each row as letter, colIndex}
-      {@const index = rowIndex * gridSize + colIndex}
+  <div class="tile-layer tile-backgrounds" aria-hidden="true">
+    {#each cells as cell, index (cell.id)}
       {@const selected = selectedSet.has(index)}
-      <button
+      <div
+        animate:flip={{ duration: 600 }}
         class:selected
         class:valid={selected && feedbackType === 'word-valid'}
         class:duplicate={selected && feedbackType === 'word-duplicate'}
         class:invalid={selected && feedbackType === 'word-invalid'}
+        class="tile-bg"
+      ></div>
+    {/each}
+  </div>
+
+  <div class="tile-layer tile-controls">
+    {#each cells as cell, index (cell.id)}
+      {@const selected = selectedSet.has(index)}
+      <button
+        animate:flip={{ duration: 600 }}
+        class:selected
         class="tile"
         type="button"
         data-cell-index={index}
         tabindex="-1"
-        aria-label={`Lettera ${letter}`}
+        aria-label={`Lettera ${cell.letter}`}
       >
-        {isPaused ? '' : letter}
+        <span class="tile-letter">{isPaused ? '' : cell.letter}</span>
       </button>
     {/each}
-  {/each}
+  </div>
 </div>
 
 <style>
   .board {
     width: min(100%, 38rem);
     aspect-ratio: 1;
-    display: grid;
-    grid-template-columns: repeat(var(--grid-size), minmax(0, 1fr));
-    gap: 1px;
+    position: relative;
     padding: 1px;
     background: var(--tile-border);
     touch-action: none;
     user-select: none;
   }
 
+  .tile-layer {
+    position: absolute;
+    inset: 1px;
+    display: grid;
+    grid-template-columns: repeat(var(--grid-size), minmax(0, 1fr));
+    gap: 1px;
+  }
+
+  .tile-backgrounds {
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .tile-controls {
+    z-index: 2;
+  }
+
+  .tile-bg,
   .tile {
     width: 100%;
     min-width: 0;
     aspect-ratio: 1;
-    display: grid;
-    place-items: center;
     border: 0;
     border-radius: 0;
-    background: var(--tile);
+  }
+
+  .tile-bg {
+    --tile-bg: var(--tile);
+    background: var(--tile-bg);
+  }
+
+  .tile {
+    display: grid;
+    place-items: center;
+    background: transparent;
     color: var(--ink);
     box-shadow: none;
     font-size: var(--tile-font);
@@ -241,29 +278,39 @@
     text-transform: uppercase;
     cursor: pointer;
     transition:
-      background 80ms ease,
       color 80ms ease;
   }
 
-  .tile:hover {
-    background: color-mix(in srgb, var(--accent) 5%, var(--tile));
+  .tile-letter {
+    position: relative;
+  }
+
+  .tile-bg.selected {
+    --tile-bg: var(--selected);
+  }
+
+  .tile-bg.valid {
+    --tile-bg: var(--success);
+  }
+
+  .tile-bg.duplicate {
+    --tile-bg: var(--warning);
+  }
+
+  .tile-bg.invalid {
+    --tile-bg: var(--danger);
+  }
+
+  .tile:hover .tile-letter {
+    color: color-mix(in srgb, var(--accent) 34%, var(--ink));
+  }
+
+  .tile-bg:hover {
+    --tile-bg: color-mix(in srgb, var(--accent) 5%, var(--tile));
   }
 
   .tile.selected {
-    background: var(--selected);
     color: white;
-  }
-
-  .tile.valid {
-    background: var(--success);
-  }
-
-  .tile.duplicate {
-    background: var(--warning);
-  }
-
-  .tile.invalid {
-    background: var(--danger);
   }
 
   .board.paused .tile {
@@ -271,8 +318,12 @@
     opacity: 0.58;
   }
 
+  .board.paused .tile-bg {
+    opacity: 0.58;
+  }
+
   @media (max-width: 520px) {
-    .board {
+    .tile-layer {
       gap: 1px;
     }
   }

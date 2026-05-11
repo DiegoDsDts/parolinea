@@ -28,6 +28,12 @@
   export let onWordSelect: (word: string) => void = () => {};
 
   $: gridSize = parseGridSize(gameConfig.grid_size);
+  $: boardCells = board.map((row, rowIndex) =>
+    row.map((letter, colIndex) => ({
+      id: `${rowIndex}-${colIndex}`,
+      letter,
+    })),
+  );
 </script>
 
 <section class="play-view">
@@ -48,7 +54,7 @@
   <div class="play-layout">
     <div class="board-shell">
       <GameBoard
-        {board}
+        {boardCells}
         {selectedIndices}
         {feedbackType}
         {gridSize}

@@ -166,7 +166,48 @@ a:focus-visible {
   min-width: 2.35rem;
 }
 
-.command-bar .pause-toggle {
+.rotate-toggle svg,
+.share-toggle svg {
+  width: 2.05rem !important;
+  height: 2.05rem !important;
+  min-width: 2.05rem;
+}
+
+.rotate-board-icon {
+  width: 2.3rem;
+  height: 2.3rem;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.rotate-board-icon .rotate-board-square {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  min-width: 1.05rem;
+  transform: translate(-50%, -50%);
+}
+
+.rotate-board-icon .rotate-board-arrows {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.45rem !important;
+  height: 2.45rem !important;
+  min-width: 2.45rem;
+  transform: translate(-50%, -50%);
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.command-bar .pause-toggle,
+.command-bar .rotate-toggle,
+.command-bar .share-toggle {
   width: 3.7rem;
   min-height: 3.2rem;
 }
@@ -414,6 +455,37 @@ a:focus-visible {
 
 .command-bar .start-command {
   width: min(100%, 12.5rem);
+}
+
+.export-game {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.export-game textarea {
+  width: 100%;
+  min-height: 14rem;
+  resize: vertical;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface-muted);
+  color: var(--ink);
+  font: 0.9rem ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  line-height: 1.45;
+}
+
+.export-game textarea:focus {
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  outline-offset: 1px;
+}
+
+.export-game .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .toast {

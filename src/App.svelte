@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ArrowRightToLine, Home, Pause, Play } from 'lucide-svelte';
+  import { ArrowRightToLine, Clipboard, Home, Pause, Play, Share2, Square } from 'lucide-svelte';
   import AphorismCard from './lib/components/AphorismCard.svelte';
   import ConfirmModal from './lib/components/ConfirmModal.svelte';
   import DictionaryModal from './lib/components/DictionaryModal.svelte';
@@ -9,6 +9,7 @@
   import HomeBoard from './lib/components/HomeBoard.svelte';
   import InfoBoard from './lib/components/InfoBoard.svelte';
   import LoadingOverlay from './lib/components/LoadingOverlay.svelte';
+  import Modal from './lib/components/Modal.svelte';
   import SettingsBoard from './lib/components/SettingsBoard.svelte';
   import WordList from './lib/components/WordList.svelte';
   import { dictionaryClient, dictionaryStatus } from './lib/services/dictionaryClient';
@@ -21,6 +22,7 @@
   import { getWordScore, sortWords } from './lib/services/scoring';
   import type {
     ActiveTab,
+    BoardCell,
     EffectiveTheme,
     FeedbackType,
     GameConfig,
@@ -36,6 +38,7 @@
   let activeTab: ActiveTab = 'game';
   let gameMode: GameMode = 'config';
   let gameConfig: GameConfig | null = null;
+  let boardCells: BoardCell[][] = [];
   let board: string[][] = [];
   let selectedIndices: number[] = [];
   let currentWord = '';
@@ -55,6 +58,8 @@
   let lastSubmittedWordIndices: number[] | null = null;
   let selectedDefinitionWord = '';
   let definitionOpen = false;
+  let exportOpen = false;
+  let exportCopied = false;
   let toastMessage = '';
   let confirmOpen = false;
   let confirmTitle = '';
@@ -72,6 +77,7 @@
 
   $: effectiveTheme = themePreference === 'system' ? systemTheme : themePreference;
   $: document.documentElement.dataset.theme = effectiveTheme;
+  $: board = boardCells.map((row) => row.map((cell) => cell.letter));
   $: totalScore = foundWordsList.reduce((sum, item) => sum + item.score, 0);
   $: totalPossibleScore = allSolutionsList.reduce((sum, item) => sum + item.score, 0);
   $: recapFoundWords = new Set(foundWordsList.map((item) => item.word));
@@ -94,6 +100,7 @@
       : $dictionaryStatus.wordsLoaded > 0
         ? `${$dictionaryStatus.wordsLoaded.toLocaleString('it-IT')} parole caricate`
         : 'Caricamento dizionario italiano';
+  $: exportJson = gameConfig ? JSON.stringify(gameConfig, null, 2) : '';
 
   onMount(() => {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
@@ -178,6 +185,22 @@
     return 0;
   }
 
+  function createBoardCells(boardLetters: string[][]): BoardCell[][] {
+    return boardLetters.map((row, rowIndex) =>
+      row.map((letter, colIndex) => ({
+        id: `${rowIndex}-${colIndex}`,
+        letter,
+      })),
+    );
+  }
+
+  function rotateMatrixClockwise<T>(matrix: T[][]): T[][] {
+    const gridSize = matrix.length;
+    return Array.from({ length: gridSize }, (_, rowIndex) =>
+      Array.from({ length: gridSize }, (_, colIndex) => matrix[gridSize - 1 - colIndex][rowIndex]),
+    );
+  }
+
   async function startNewGame(config: GameConfig, options: StartGameOptions = {}) {
     dictionaryClient.cancelSolve();
     resetRoundState();
@@ -239,7 +262,7 @@
       }
 
       gameConfig = selectedConfig;
-      board = selectedConfig.board_letters;
+      boardCells = createBoardCells(selectedConfig.board_letters);
       allSolutionsList = selectedSolutions;
       gameMode = 'play';
       gameActive = true;
@@ -275,6 +298,38 @@
       })
       .join('')
       .toLowerCase();
+  }
+
+  function rotateBoardClockwise() {
+    if (!gameConfig || !gameActive || isPaused) return;
+
+    clearFeedbackTimer();
+    submissionVersion += 1;
+    selectedIndices = [];
+    currentWord = '';
+    feedbackType = null;
+    lastSubmittedWordIndices = null;
+
+    boardCells = rotateMatrixClockwise(boardCells);
+  }
+
+  async function copyExportJson() {
+    if (!exportJson) return;
+
+    try {
+      await navigator.clipboard.writeText(exportJson);
+      exportCopied = true;
+      window.setTimeout(() => {
+        exportCopied = false;
+      }, 1800);
+    } catch {
+      showToast('Impossibile copiare negli appunti.');
+    }
+  }
+
+  function openExportModal() {
+    exportCopied = false;
+    exportOpen = true;
   }
 
   function handleDicePress(index: number) {
@@ -414,7 +469,7 @@
     dictionaryClient.cancelSolve();
     resetRoundState();
     gameConfig = null;
-    board = [];
+    boardCells = [];
     gameMode = 'config';
     activeTab = 'game';
   }
@@ -566,7 +621,7 @@
           {:else if gameMode === 'play' && gameConfig}
             <div class="play-board-slot">
               <GameBoard
-                {board}
+                {boardCells}
                 {selectedIndices}
                 {feedbackType}
                 gridSize={parseGridSize(gameConfig.grid_size)}
@@ -579,7 +634,7 @@
             </div>
           {:else if gameMode === 'recap' && gameConfig}
             <div class="static-board" style={`--grid-size: ${recapGridSize}; --static-tile-font: ${staticTileFont};`}>
-              {#each board as row}
+              {#each gameConfig.board_letters as row}
                 {#each row as letter}
                   <div class="static-tile">{letter}</div>
                 {/each}
@@ -624,6 +679,19 @@
           <Home size={18} />
           Home
         </button>
+        <button class="button secondary square rotate-toggle" type="button" aria-label="Ruota schema" on:click={rotateBoardClockwise}>
+          <span class="rotate-board-icon" aria-hidden="true">
+            <Square class="rotate-board-square" strokeWidth={1.9} />
+            <svg class="rotate-board-arrows" viewBox="0 0 36 36" fill="none">
+              <path d="M21 5c5.8 0 10 4.2 10 10" />
+              <path d="M31 15l-3.2-3.2" />
+              <path d="M31 15l3.2-3.2" />
+              <path d="M15 31c-5.8 0-10-4.2-10-10" />
+              <path d="M5 21l3.2 3.2" />
+              <path d="M5 21l-3.2 3.2" />
+            </svg>
+          </span>
+        </button>
         <button class="button secondary square pause-toggle" type="button" aria-label={isPaused ? 'Riprendi' : 'Pausa'} on:click={() => (isPaused = !isPaused)}>
           {#if isPaused}
             <Play strokeWidth={1.4} />
@@ -639,6 +707,9 @@
         <button class="button secondary" type="button" on:click={goHome}>
           <Home size={18} />
           Home
+        </button>
+        <button class="button secondary square share-toggle" type="button" aria-label="Condividi partita" on:click={openExportModal}>
+          <Share2 strokeWidth={1.7} />
         </button>
         <button class="button primary" type="button" on:click={startNewGameWithSameSettings}>
           <Play size={18} />
@@ -666,6 +737,19 @@
   word={selectedDefinitionWord}
   onClose={() => (definitionOpen = false)}
 />
+
+<Modal open={exportOpen} title="Condividi partita" wide onClose={() => (exportOpen = false)}>
+  <div class="export-game">
+    <textarea readonly rows="12" spellcheck="false" value={exportJson}></textarea>
+    <div class="modal-actions">
+      <button class="button secondary" type="button" on:click={() => (exportOpen = false)}>Chiudi</button>
+      <button class="button primary" type="button" on:click={copyExportJson}>
+        <Clipboard size={18} />
+        {exportCopied ? 'Copiato' : 'Copia JSON'}
+      </button>
+    </div>
+  </div>
+</Modal>
 
 <ConfirmModal
   open={confirmOpen}
