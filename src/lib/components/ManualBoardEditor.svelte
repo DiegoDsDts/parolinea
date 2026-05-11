@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte';
   import { Check } from 'lucide-svelte';
   import { createEmptyBoard } from '../services/letters';
   import { normalizeBoard } from '../services/gameConfig';
@@ -11,6 +12,7 @@
   export let onSave: (board: string[][]) => void = () => {};
 
   let localBoard: string[][] = createEmptyBoard(gridSize);
+  let cellInputs: HTMLInputElement[] = [];
   let previousOpen = open;
   let previousGridSize = gridSize;
 
@@ -23,9 +25,21 @@
   $: if ((open && !previousOpen) || gridSize !== previousGridSize) {
     localBoard = fitBoard(boardLetters, gridSize);
     previousGridSize = gridSize;
+    focusCell(0);
   }
 
   $: previousOpen = open;
+
+  function getCellIndex(rowIndex: number, colIndex: number) {
+    return rowIndex * gridSize + colIndex;
+  }
+
+  async function focusCell(index: number) {
+    await tick();
+    const input = cellInputs[index];
+    input?.focus();
+    input?.select();
+  }
 
   function updateCell(event: Event, rowIndex: number, colIndex: number) {
     const input = event.currentTarget as HTMLInputElement;
@@ -34,6 +48,11 @@
     localBoard = localBoard.map((row, r) =>
       row.map((cell, c) => (r === rowIndex && c === colIndex ? value : cell)),
     );
+
+    if (value) {
+      const nextIndex = getCellIndex(rowIndex, colIndex) + 1;
+      if (nextIndex < gridSize * gridSize) focusCell(nextIndex);
+    }
   }
 
   function save() {
@@ -55,6 +74,7 @@
             aria-label={`Riga ${rowIndex + 1}, colonna ${colIndex + 1}`}
             maxlength="1"
             value={cell}
+            bind:this={cellInputs[getCellIndex(rowIndex, colIndex)]}
             inputmode="text"
             autocomplete="off"
             autocapitalize="characters"
