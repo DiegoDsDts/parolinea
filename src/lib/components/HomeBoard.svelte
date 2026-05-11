@@ -9,8 +9,8 @@
     Edit3,
     Grid3X3,
     HelpCircle,
+    LetterText,
     Settings,
-    Type,
   } from 'lucide-svelte';
   import type { DictionaryStatus, GameConfig, StartGameOptions, WordQuantityMode } from '../types';
   import {
@@ -91,7 +91,7 @@
     value: option,
   }));
   $: minWordLengthSelectOptions = minWordLengthOptions.map((option) => ({
-    label: String(option),
+    label: `${option}+`,
     value: option,
   }));
   $: selectedScoreRange = manualMode ? null : getSolutionScoreRange(wordQuantityMode, gridSize, minWordLength);
@@ -350,9 +350,9 @@
       aria-expanded={openMenu === 'min'}
       on:click={() => toggleMenu('min')}
     >
-      <Type size={22} />
+      <LetterText size={22} />
       <span>Minima</span>
-      <strong>{minWordLength}</strong>
+      <strong>{minWordLength}+</strong>
       <span class="tile-chevron"><ChevronDown size={16} /></span>
     </button>
 

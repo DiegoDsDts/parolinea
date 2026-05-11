@@ -41,10 +41,12 @@
     onEnd();
   }
 
+  $: urgent = active && !paused && seconds > 0 && remaining > 0 && remaining <= 10;
+
   onDestroy(clearTimer);
 </script>
 
-<span class="timer" class:paused aria-label="Tempo rimasto">
+<span class="timer" class:paused class:urgent aria-label="Tempo rimasto">
   {seconds === 0 ? '∞' : formatDuration(remaining)}
 </span>
 
@@ -62,5 +64,22 @@
 
   .timer.paused {
     color: var(--muted);
+  }
+
+  .timer.urgent {
+    color: var(--warning);
+    animation: timer-urgent 420ms ease-in-out infinite alternate;
+  }
+
+  @keyframes timer-urgent {
+    from {
+      transform: scale(1);
+      text-shadow: 0 0 0 color-mix(in srgb, var(--warning) 0%, transparent);
+    }
+
+    to {
+      transform: scale(1.08);
+      text-shadow: 0 0 0.75rem color-mix(in srgb, var(--warning) 58%, transparent);
+    }
   }
 </style>
