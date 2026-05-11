@@ -1,13 +1,21 @@
 <script lang="ts">
+  import { X } from 'lucide-svelte';
+
   export let visible = false;
   export let title = 'Caricamento';
   export let detail = '';
   export let progress: number | null = null;
+  export let onCancel: (() => void) | null = null;
 </script>
 
 {#if visible}
   <div class="loading-overlay" role="status" aria-live="polite">
     <div class="loading-panel">
+      {#if onCancel}
+        <button class="loading-close" type="button" aria-label="Annulla caricamento" on:click={onCancel}>
+          <X size={21} />
+        </button>
+      {/if}
       <div class="loader" aria-hidden="true"></div>
       <div class="loading-copy">
         <strong>{title}</strong>
@@ -37,6 +45,7 @@
   }
 
   .loading-panel {
+    position: relative;
     width: min(100%, 24rem);
     display: grid;
     gap: 1rem;
@@ -46,6 +55,29 @@
     border-radius: 0;
     background: var(--surface);
     box-shadow: var(--shadow-lg);
+  }
+
+  .loading-close {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    width: 2.15rem;
+    height: 2.15rem;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    background: var(--surface-muted);
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .loading-close:hover,
+  .loading-close:focus-visible {
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    color: var(--accent-strong);
   }
 
   .loader {

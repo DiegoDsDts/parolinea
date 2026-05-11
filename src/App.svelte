@@ -33,7 +33,7 @@
   } from './lib/types';
 
   const THEME_STORAGE_KEY = 'parolinea/theme-preference';
-  const TARGETED_BOARD_ATTEMPT_LIMIT = 40;
+  const TARGETED_BOARD_ATTEMPT_LIMIT = 240;
 
   let activeTab: ActiveTab = 'game';
   let gameMode: GameMode = 'config';
@@ -96,7 +96,7 @@
   $: loadingTitle = gameMode === 'loading' ? 'Creazione dello schema' : 'Avvio di Parolinea';
   $: loadingDetail =
     gameMode === 'loading'
-      ? `${generationAttempt > 1 ? `Tentativo ${generationAttempt}: ` : ''}Analisi soluzioni: ${calculationWordsFound.toLocaleString('it-IT')} parole candidate${generationTargetRange ? ' nel range scelto' : ''}`
+      ? `${generationAttempt > 1 ? `Tentativo ${generationAttempt}: ` : ''}`
       : $dictionaryStatus.wordsLoaded > 0
         ? `${$dictionaryStatus.wordsLoaded.toLocaleString('it-IT')} parole caricate`
         : 'Caricamento dizionario italiano';
@@ -475,6 +475,11 @@
     activeTab = 'game';
   }
 
+  function cancelLoadingAndGoHome() {
+    generationVersion += 1;
+    completeGoHome();
+  }
+
   function goHome() {
     if (gameMode === 'play') {
       openConfirm({
@@ -730,6 +735,7 @@
   title={loadingTitle}
   detail={loadingDetail}
   progress={gameMode === 'loading' ? calculationProgress : null}
+  onCancel={gameMode === 'loading' ? cancelLoadingAndGoHome : null}
 />
 
 <DictionaryModal
