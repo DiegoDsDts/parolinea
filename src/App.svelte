@@ -89,7 +89,7 @@
       displayScore: found ? `+${item.score}` : String(item.score),
     };
   });
-  $: wordPercent = allSolutionsList.length > 0 ? Math.round((foundWordsList.length / allSolutionsList.length) * 100) : 0;
+  $: scorePercent = totalPossibleScore > 0 ? Math.round((totalScore / totalPossibleScore) * 100) : 0;
   $: recapGridSize = gameConfig ? parseGridSize(gameConfig.grid_size) : 4;
   $: staticTileFont = `calc(var(--board-size) * ${0.45 / recapGridSize})`;
   $: loadingVisible = $dictionaryStatus.loading || gameMode === 'loading';
@@ -563,7 +563,7 @@
             {currentWord || ''}
           </div>
           <div class="board-meta">
-            <strong>{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'}</strong>
+            <strong>{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'} ({allSolutionsList.length > 0 ? scorePercent : '?'}%)</strong>
             <GameTimer
               seconds={gameConfig.duration_sec}
               active={gameActive}
@@ -578,8 +578,7 @@
             <span>Riepilogo</span>
           </div>
           <div class="board-meta">
-            <strong>{foundWordsList.length} / {allSolutionsList.length}</strong>
-            <span>{wordPercent}% parole</span>
+            <strong>{totalScore} / {totalPossibleScore} ({scorePercent}%)</strong>
           </div>
         {:else if activeTab === 'info'}
           <div class="board-title">
