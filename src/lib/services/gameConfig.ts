@@ -50,8 +50,8 @@ export function getSolutionScoreRange(
 ): SolutionScoreRange | null {
   if (mode === 'random') return null;
 
-  const lengthFactor = Math.max(0.25, 8 - minWordLength);
-  const baseScore = Math.max(80, Math.round(gridSize ** 4 * lengthFactor * 4));
+  const lengthFactor = Math.max(0.18, 7 - minWordLength);
+  const baseScore = Math.max(24, Math.round(gridSize ** 4 * lengthFactor * 0.72));
   const lowMax = Math.round(baseScore * 0.7);
   const mediumMax = Math.round(baseScore * 1.4);
 

@@ -4,17 +4,14 @@
   export let onBack: () => void = () => {};
 
   const scoreRows = [
-    { length: '2', score: '2' },
-    { length: '3', score: '5' },
-    { length: '4', score: '9' },
-    { length: '5', score: '14' },
-    { length: '6', score: '20' },
-    { length: '7', score: '27' },
-    { length: '8', score: '35' },
-    { length: '9', score: '44' },
-    { length: '10', score: '54' },
-    { length: '11', score: '65' },
-    { length: '12+', score: '77' },
+    { length: 'Minima', score: '1' },
+    { length: '+1', score: '3' },
+    { length: '+2', score: '5' },
+    { length: '+3', score: '7' },
+    { length: '+4', score: '9' },
+    { length: '+5', score: '11' },
+    { length: '+6', score: '13' },
+    { length: '+7 o più', score: '15' },
   ];
 </script>
 
@@ -22,7 +19,7 @@
   <section class="info-tile score-tile">
     <h2>Valore parole</h2>
     <div class="score-table" aria-label="Punti per lunghezza parola">
-      <span class="score-head">Lettere</span>
+      <span class="score-head">Lunghezza</span>
       <span class="score-head">Punti</span>
       {#each scoreRows as row}
         <span>{row.length}</span>

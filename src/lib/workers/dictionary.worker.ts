@@ -132,9 +132,9 @@ function buildAdjacencyList(gridSize: number): number[][] {
   return adjacencyList;
 }
 
-function sortSolutions(words: Set<string>): WordItem[] {
+function sortSolutions(words: Set<string>, minWordLength: number): WordItem[] {
   return Array.from(words)
-    .map((word) => ({ word, score: getWordScore(word) }))
+    .map((word) => ({ word, score: getWordScore(word, minWordLength) }))
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       return a.word.localeCompare(b.word, 'it');
@@ -209,7 +209,7 @@ function solveBoard(
       postMessage({
         type: 'solve-result',
         requestId,
-        words: sortSolutions(possibleWords),
+        words: sortSolutions(possibleWords, minWordLength),
       });
     } else {
       setTimeout(processBatch, 0);

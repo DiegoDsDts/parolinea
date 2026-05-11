@@ -410,7 +410,7 @@
         if (foundWords.has(submittedWord)) {
           feedbackType = 'word-duplicate';
         } else {
-          const score = getWordScore(submittedWord);
+          const score = getWordScore(submittedWord, gameConfig.min_word_length);
           foundWords = new Set(foundWords).add(submittedWord);
           foundWordsList = sortWords([...foundWordsList, { word: submittedWord, score }]);
           feedbackType = 'word-valid';
