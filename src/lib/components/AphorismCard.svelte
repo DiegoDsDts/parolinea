@@ -110,6 +110,22 @@
       text: 'Chi ama veramente le parole fa di tutto per farti rimanere senza.',
       author: 'Fabrizio Caramagna',
     },
+    {
+      text: 'Tutto quello che ho per difendermi è l\'alfabeto; è quanto mi hanno dato al posto di un fucile.',
+      author: 'Philip Roth',
+    },
+    {
+      text: 'Più da vicino si guarda una parola, più da lontano essa ci guarda.',
+      author: 'Karl Kraus',
+    },
+    {
+      text: 'Volevo dire al mondo una sola parola. Non riuscendoci, diventai scrittore.',
+      author: 'Stanisław Jerzy Lec',
+    },
+    {
+      text: 'Il mio linguaggio è la puttana di tutti che io rendo vergine.',
+      author: 'Karl Kraus',
+    },
   ];
 
   const MAX_QUOTE_SIZE_REM = 1.18;
