@@ -300,11 +300,7 @@
   .tile-bg.invalid {
     --tile-bg: var(--danger);
   }
-
-  .tile:hover .tile-letter {
-    color: color-mix(in srgb, var(--accent) 34%, var(--ink));
-  }
-
+  
   .tile-bg:hover {
     --tile-bg: color-mix(in srgb, var(--accent) 5%, var(--tile));
   }
