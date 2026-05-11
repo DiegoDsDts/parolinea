@@ -8,8 +8,6 @@
     Download,
     Edit3,
     Grid3X3,
-    HelpCircle,
-    LetterText,
     Settings,
   } from 'lucide-svelte';
   import type { DictionaryStatus, GameConfig, StartGameOptions, WordQuantityMode } from '../types';
@@ -350,8 +348,12 @@
       aria-expanded={openMenu === 'min'}
       on:click={() => toggleMenu('min')}
     >
-      <LetterText size={22} />
-      <span>Minima</span>
+      <svg class="length-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M5 7h5" />
+        <path d="M5 12h9" />
+        <path d="M5 17h14" />
+      </svg>
+      <span>Lunghezza</span>
       <strong>{minWordLength}+</strong>
       <span class="tile-chevron"><ChevronDown size={16} /></span>
     </button>
@@ -396,7 +398,11 @@
   </div>
 
   <button class="board-tile mode-tile" type="button" on:click={toggleManualMode}>
-    <HelpCircle size={22} />
+    <svg class="letters-mode-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="4.25" y="4.25" width="15.5" height="15.5" />
+      <path d="M9.45 9.35a2.75 2.75 0 0 1 5.1 1.45c0 1.8-2.55 2.1-2.55 3.55" />
+      <circle cx="12" cy="17" r="0.55" fill="currentColor" stroke="none" />
+    </svg>
     <span>Lettere</span>
     <strong>{manualMode ? 'Manuale' : 'Random'}</strong>
   </button>
@@ -578,6 +584,20 @@
     font-size: clamp(0.62rem, 2vw, 0.76rem);
     font-weight: 750;
     line-height: 1.1;
+  }
+
+  .letters-mode-icon,
+  .length-icon {
+    width: 1.55rem;
+    height: 1.55rem;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+
+  .length-icon {
+    stroke-width: 2.25;
   }
 
   .choice-tile {
