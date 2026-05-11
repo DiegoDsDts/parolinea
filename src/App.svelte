@@ -347,6 +347,7 @@
     const existingIndex = selectedIndices.indexOf(index);
     if (existingIndex >= 0) {
       if (existingIndex === selectedIndices.length - 1) return;
+      if (existingIndex !== selectedIndices.length - 2) return;
 
       selectedIndices = selectedIndices.slice(0, existingIndex + 1);
       updateCurrentWord(selectedIndices);
