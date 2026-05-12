@@ -7,6 +7,7 @@
   export let feedbackType: FeedbackType = null;
   export let gridSize = 4;
   export let isPaused = false;
+  export let disabled = false;
   export let onDiceSelectStart: (index: number) => void = () => {};
   export let onDiceSelectMove: (index: number) => void = () => {};
   export let onDiceSelectEnd: () => void = () => {};
@@ -125,7 +126,7 @@
   }
 
   function handlePointerDown(event: PointerEvent) {
-    if (isPaused) return;
+    if (isPaused || disabled) return;
     const index = indexFromTarget(event.target);
     if (index === null) return;
 
@@ -140,7 +141,7 @@
   }
 
   function handlePointerMove(event: PointerEvent) {
-    if (!dragging || isPaused) return;
+    if (!dragging || isPaused || disabled) return;
     if (
       Math.abs(event.clientX - pointerStartX) > TAP_MOVE_TOLERANCE_PX ||
       Math.abs(event.clientY - pointerStartY) > TAP_MOVE_TOLERANCE_PX
@@ -182,6 +183,7 @@
 <div
   class="board"
   class:paused={isPaused}
+  class:disabled
   style={`--grid-size: ${gridSize}; --tile-font: ${tileFont};`}
   use:measureTileFont={`${gridSize}:${boardCells.length}`}
   on:pointerdown={handlePointerDown}
@@ -190,6 +192,7 @@
   on:pointercancel={handlePointerCancel}
   role="grid"
   aria-label="Griglia di gioco"
+  aria-disabled={disabled}
   tabindex="0"
 >
   <div class="tile-layer tile-backgrounds" aria-hidden="true">
@@ -316,6 +319,19 @@
 
   .board.paused .tile-bg {
     opacity: 0.58;
+  }
+
+  .board.disabled .tile {
+    cursor: default;
+    color: color-mix(in srgb, var(--ink) 68%, var(--muted));
+  }
+
+  .board.disabled .tile-bg {
+    --tile-bg: color-mix(in srgb, var(--tile) 76%, var(--ink));
+  }
+
+  .board.disabled .tile-controls {
+    pointer-events: none;
   }
 
   @media (max-width: 520px) {

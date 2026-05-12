@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ArrowRightToLine, Clipboard, Home, Pause, Play, Share2, Square } from 'lucide-svelte';
+  import { ArrowRightToLine, Clipboard, Home, Pause, Play, RotateCcw, Share2, Square } from 'lucide-svelte';
   import AphorismCard from './lib/components/AphorismCard.svelte';
   import ConfirmModal from './lib/components/ConfirmModal.svelte';
   import DictionaryModal from './lib/components/DictionaryModal.svelte';
@@ -92,7 +92,8 @@
   });
   $: scorePercent = totalPossibleScore > 0 ? Math.round((totalScore / totalPossibleScore) * 100) : 0;
   $: recapGridSize = gameConfig ? parseGridSize(gameConfig['grid-size']) : 4;
-  $: staticTileFont = `calc(var(--board-size) * ${0.45 / recapGridSize})`;
+  $: staticTileFont = `calc(var(--board-size) * ${0.5 / recapGridSize})`;
+  $: gameFinished = activeTab === 'game' && gameMode === 'finished';
   $: loadingVisible = $dictionaryStatus.loading || gameMode === 'loading';
   $: loadingTitle = gameMode === 'loading' ? 'Creazione dello schema' : 'Avvio di Parolinea';
   $: loadingDetail =
@@ -334,6 +335,27 @@
     exportOpen = true;
   }
 
+  function finishGame() {
+    clearFeedbackTimer();
+    selectedIndices = [];
+    currentWord = '';
+    feedbackType = null;
+    lastSubmittedWordIndices = null;
+    gameActive = false;
+    isPaused = false;
+    gameMode = 'finished';
+  }
+
+  function showSolutions() {
+    clearFeedbackTimer();
+    selectedIndices = [];
+    currentWord = '';
+    feedbackType = null;
+    gameActive = false;
+    isPaused = false;
+    gameMode = 'recap';
+  }
+
   function handleDicePress(index: number) {
     if (!gameActive || isPaused) return;
     clearFeedbackTimer();
@@ -413,9 +435,20 @@
           feedbackType = 'word-duplicate';
         } else {
           const score = getWordScore(submittedWord, gameConfig['min-word-length']);
-          foundWords = new Set(foundWords).add(submittedWord);
-          foundWordsList = sortWords([...foundWordsList, { word: submittedWord, score }]);
+          const nextFoundWords = new Set(foundWords).add(submittedWord);
+          const nextFoundWordsList = sortWords([...foundWordsList, { word: submittedWord, score }]);
+          foundWords = nextFoundWords;
+          foundWordsList = nextFoundWordsList;
           feedbackType = 'word-valid';
+
+          if (allSolutionsList.length > 0 && nextFoundWordsList.length >= allSolutionsList.length) {
+            clearFeedbackTimer();
+            feedbackTimeout = window.setTimeout(() => {
+              feedbackTimeout = null;
+              finishGame();
+            }, 260);
+            return;
+          }
         }
       } else {
         feedbackType = 'word-invalid';
@@ -503,18 +536,12 @@
         title: 'Mostra soluzioni',
         message: 'Vuoi chiudere la partita e vedere tutte le soluzioni?',
         confirmLabel: 'Mostra',
-        onConfirm: () => endGame(false),
+        onConfirm: showSolutions,
       });
       return;
     }
 
-    clearFeedbackTimer();
-    selectedIndices = [];
-    currentWord = '';
-    feedbackType = null;
-    gameActive = false;
-    isPaused = false;
-    gameMode = 'recap';
+    finishGame();
   }
 
   function startNewGameWithSameSettings() {
@@ -524,6 +551,13 @@
       generateGameConfig(gridSize, gameConfig['min-word-length'], gameConfig['duration-sec']),
       lastGameOptions,
     );
+  }
+
+  function restartSameBoard() {
+    if (!gameConfig) return;
+    const nextGameOptions = { ...lastGameOptions };
+    startNewGame(gameConfig, { wordQuantityMode: 'random' });
+    lastGameOptions = nextGameOptions;
   }
 
   function startDefaultGame() {
@@ -583,6 +617,17 @@
               onEnd={() => endGame(false)}
             />
           </div>
+        {:else if activeTab === 'game' && gameMode === 'finished'}
+          <div class="board-title">
+            <strong>Fine partita</strong>
+            <span>{foundWordsList.length} / {allSolutionsList.length} parole</span>
+          </div>
+          <div class="board-meta">
+            <strong class="score-summary">
+              <span class="score-points">{totalScore} / {totalPossibleScore}</span>
+              <span class="score-percent">{scorePercent}%</span>
+            </strong>
+          </div>
         {:else if activeTab === 'game' && gameMode === 'recap'}
           <div class="board-title">
             <strong>Parolinea</strong>
@@ -631,14 +676,15 @@
               onInfo={() => setActiveTab('info')}
               onSettings={() => setActiveTab('settings')}
             />
-          {:else if gameMode === 'play' && gameConfig}
-            <div class="play-board-slot">
+          {:else if (gameMode === 'play' || gameMode === 'finished') && gameConfig}
+            <div class="play-board-slot" class:finished={gameFinished}>
               <GameBoard
                 {boardCells}
                 {selectedIndices}
                 {feedbackType}
                 gridSize={parseGridSize(gameConfig['grid-size'])}
                 {isPaused}
+                disabled={gameFinished}
                 onDiceSelectStart={handleDicePress}
                 onDiceSelectMove={handleDiceMove}
                 onDiceSelectEnd={handleDiceRelease}
@@ -674,6 +720,17 @@
           emptyText="Nessuna parola trovata"
           onWordSelect={openDefinition}
         />
+      {:else if activeTab === 'game' && gameMode === 'finished'}
+        <section class="finished-panel" aria-label="Partita finita">
+          <button class="finished-solutions" type="button" on:click={showSolutions}>
+            <span class="finished-kicker">Partita finita</span>
+            <strong>Vedi soluzioni</strong>
+            <span class="finished-detail">{foundWordsList.length} parole trovate su {allSolutionsList.length}</span>
+            <span class="finished-icon" aria-hidden="true">
+              <ArrowRightToLine strokeWidth={1.8} />
+            </span>
+          </button>
+        </section>
       {:else if activeTab === 'game' && gameMode === 'recap'}
         <WordList
           title="Tutte le soluzioni"
@@ -688,9 +745,8 @@
 
     <nav class="command-bar" aria-label="Comandi">
       {#if activeTab === 'game' && gameMode === 'play'}
-        <button class="button secondary" type="button" on:click={goHome}>
-          <Home size={18} />
-          Home
+        <button class="button secondary square home-toggle" type="button" aria-label="Home" on:click={goHome}>
+          <Home strokeWidth={1.8} />
         </button>
         <button class="button secondary square rotate-toggle" type="button" aria-label="Ruota schema" on:click={rotateBoardClockwise}>
           <span class="rotate-board-icon" aria-hidden="true">
@@ -716,13 +772,29 @@
           <ArrowRightToLine size={19} />
           Soluzioni
         </button>
-      {:else if activeTab === 'game' && gameMode === 'recap'}
-        <button class="button secondary" type="button" on:click={goHome}>
-          <Home size={18} />
-          Home
+      {:else if activeTab === 'game' && gameMode === 'finished'}
+        <button class="button secondary square home-toggle" type="button" aria-label="Home" on:click={goHome}>
+          <Home strokeWidth={1.8} />
         </button>
         <button class="button secondary square share-toggle" type="button" aria-label="Condividi partita" on:click={openExportModal}>
           <Share2 strokeWidth={1.7} />
+        </button>
+        <button class="button secondary square replay-toggle" type="button" aria-label="Rigioca schema" on:click={restartSameBoard}>
+          <RotateCcw strokeWidth={1.8} />
+        </button>
+        <button class="button primary" type="button" on:click={startNewGameWithSameSettings}>
+          <Play size={18} />
+          Prossima Partita
+        </button>
+      {:else if activeTab === 'game' && gameMode === 'recap'}
+        <button class="button secondary square home-toggle" type="button" aria-label="Home" on:click={goHome}>
+          <Home strokeWidth={1.8} />
+        </button>
+        <button class="button secondary square share-toggle" type="button" aria-label="Condividi partita" on:click={openExportModal}>
+          <Share2 strokeWidth={1.7} />
+        </button>
+        <button class="button secondary square replay-toggle" type="button" aria-label="Rigioca schema" on:click={restartSameBoard}>
+          <RotateCcw strokeWidth={1.8} />
         </button>
         <button class="button primary" type="button" on:click={startNewGameWithSameSettings}>
           <Play size={18} />

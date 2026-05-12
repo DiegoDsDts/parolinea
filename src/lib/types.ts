@@ -1,4 +1,4 @@
-export type GameMode = 'config' | 'loading' | 'play' | 'recap';
+export type GameMode = 'config' | 'loading' | 'play' | 'finished' | 'recap';
 export type ActiveTab = 'game' | 'info' | 'settings';
 export type FeedbackType = 'word-valid' | 'word-duplicate' | 'word-invalid' | null;
 export type ThemePreference = 'light' | 'dark' | 'system';
