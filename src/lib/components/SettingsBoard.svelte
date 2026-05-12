@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { ArrowLeft, Monitor, Moon, Sun } from 'lucide-svelte';
+  import { ArrowLeft, Monitor, Moon, Sun, UserRound } from 'lucide-svelte';
   import type { ThemePreference } from '../types';
 
   export let themePreference: ThemePreference = 'system';
+  export let playerName = '';
   export let onThemeChange: (theme: ThemePreference) => void = () => {};
+  export let onPlayerNameChange: (name: string) => void = () => {};
   export let onBack: () => void = () => {};
 
   const themeOptions: Array<{ value: ThemePreference; label: string; Icon: typeof Sun }> = [
@@ -11,6 +13,10 @@
     { value: 'dark', label: 'Scuro', Icon: Moon },
     { value: 'system', label: 'Sistema', Icon: Monitor },
   ];
+
+  function handlePlayerNameInput(event: Event) {
+    onPlayerNameChange((event.currentTarget as HTMLInputElement).value);
+  }
 </script>
 
 <div class="settings-board" aria-label="Impostazioni">
@@ -27,7 +33,19 @@
     </button>
   {/each}
 
-  <div class="settings-tile empty-tile row-2 col-1" aria-hidden="true"></div>
+  <label class="settings-tile name-tile row-2 col-1">
+    <UserRound size={24} />
+    <span>Nome</span>
+    <input
+      aria-label="Il tuo nome"
+      autocomplete="name"
+      maxlength="24"
+      placeholder="Il tuo nome"
+      type="text"
+      value={playerName}
+      on:input={handlePlayerNameInput}
+    />
+  </label>
   <div class="settings-tile empty-tile row-2 col-2" aria-hidden="true"></div>
   <div class="settings-tile empty-tile row-2 col-3" aria-hidden="true"></div>
 
@@ -93,6 +111,35 @@
   .empty-tile {
     pointer-events: none;
     background: color-mix(in srgb, var(--tile) 68%, var(--surface-muted));
+  }
+
+  .name-tile {
+    cursor: text;
+  }
+
+  .name-tile:focus-within {
+    background: color-mix(in srgb, var(--accent) 10%, var(--tile));
+    color: var(--accent-strong);
+  }
+
+  .name-tile input {
+    width: min(100%, 8.5rem);
+    min-width: 0;
+    height: 1.95rem;
+    padding: 0 0.42rem;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: clamp(0.72rem, 2.2vw, 0.9rem);
+    font-weight: 750;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .name-tile input::placeholder {
+    color: var(--muted);
+    opacity: 0.8;
   }
 
   .row-2 {

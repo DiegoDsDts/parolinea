@@ -34,6 +34,7 @@
   } from './lib/types';
 
   const THEME_STORAGE_KEY = 'parolinea/theme-preference';
+  const PLAYER_NAME_STORAGE_KEY = 'parolinea/player-name';
   const TARGETED_BOARD_ATTEMPT_LIMIT = 240;
 
   let activeTab: ActiveTab = 'game';
@@ -74,6 +75,7 @@
   let lastGameOptions: StartGameOptions = {};
 
   let themePreference: ThemePreference = 'system';
+  let playerName = '';
   let systemTheme: EffectiveTheme = 'light';
 
   $: effectiveTheme = themePreference === 'system' ? systemTheme : themePreference;
@@ -94,6 +96,10 @@
   $: recapGridSize = gameConfig ? parseGridSize(gameConfig['grid-size']) : 4;
   $: staticTileFont = `calc(var(--board-size) * ${0.5 / recapGridSize})`;
   $: gameFinished = activeTab === 'game' && gameMode === 'finished';
+  $: displayPlayerName = playerName.trim();
+  $: playerNameFontSize = displayPlayerName
+    ? `clamp(0.58rem, min(calc(var(--board-size) * 0.036), ${17 / Math.max(displayPlayerName.length, 1)}rem), 1.08rem)`
+    : '1rem';
   $: loadingVisible = $dictionaryStatus.loading || gameMode === 'loading';
   $: loadingTitle = gameMode === 'loading' ? 'Creazione dello schema' : 'Avvio di Parolinea';
   $: loadingDetail =
@@ -109,6 +115,8 @@
     if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
       themePreference = savedTheme;
     }
+
+    playerName = localStorage.getItem(PLAYER_NAME_STORAGE_KEY) ?? '';
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     systemTheme = mediaQuery.matches ? 'dark' : 'light';
@@ -138,6 +146,11 @@
   function setThemePreference(nextTheme: ThemePreference) {
     themePreference = nextTheme;
     localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  }
+
+  function setPlayerName(nextName: string) {
+    playerName = nextName.trimStart().slice(0, 24);
+    localStorage.setItem(PLAYER_NAME_STORAGE_KEY, playerName);
   }
 
   function showToast(message: string) {
@@ -594,7 +607,7 @@
     <div class="top-blank" aria-hidden="true"></div>
 
     <section class="board-stage" aria-label="Area principale">
-      <div class="board-info">
+      <div class="board-info" class:home-info={activeTab === 'game' && gameMode === 'config' && !!displayPlayerName}>
         {#if activeTab === 'game' && gameMode === 'play' && gameConfig}
           <div
             class:valid={feedbackType === 'word-valid'}
@@ -656,7 +669,11 @@
             <strong>Parolinea</strong>
             <span>Home</span>
           </div>
-          <div class="board-meta" aria-hidden="true"></div>
+          <div class="board-meta home-player-meta" aria-hidden={!displayPlayerName}>
+            {#if displayPlayerName}
+              <span class="player-name" style={`--player-name-font-size: ${playerNameFontSize};`}>{displayPlayerName}</span>
+            {/if}
+          </div>
         {/if}
       </div>
 
@@ -705,7 +722,9 @@
         {:else}
           <SettingsBoard
             {themePreference}
+            {playerName}
             onThemeChange={setThemePreference}
+            onPlayerNameChange={setPlayerName}
             onBack={goHome}
           />
         {/if}

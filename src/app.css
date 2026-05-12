@@ -280,6 +280,10 @@ a:focus-visible {
   gap: 0.65rem;
 }
 
+.board-info.home-info {
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+}
+
 .board-title {
   min-width: 0;
   display: grid;
@@ -388,6 +392,29 @@ a:focus-visible {
 .board-meta .timer {
   min-width: 0;
   justify-content: flex-end;
+}
+
+.home-player-meta {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  justify-self: end;
+  justify-items: end;
+}
+
+.home-player-meta .player-name {
+  max-width: 100%;
+  padding: 0.38rem 0.55rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 84%, var(--accent));
+  color: var(--accent-strong);
+  font-size: var(--player-name-font-size);
+  font-weight: 900;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: clip;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .board-area {
