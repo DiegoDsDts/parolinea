@@ -394,6 +394,16 @@ a:focus-visible {
   justify-content: flex-end;
 }
 
+.board-meta .challenge-target {
+  max-width: 100%;
+  color: var(--warning);
+  font-size: clamp(0.72rem, calc(var(--board-size) * 0.027), 0.95rem);
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .home-player-meta {
   width: 100%;
   min-width: 0;
@@ -485,6 +495,64 @@ a:focus-visible {
   color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.35;
+}
+
+.challenge-board {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: clamp(0.35rem, calc(var(--board-size) * 0.018), 0.75rem);
+  padding: clamp(1rem, calc(var(--board-size) * 0.065), 2rem);
+  border: 1px solid color-mix(in srgb, var(--warning) 48%, var(--tile-border));
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--warning) 16%, var(--surface)),
+      color-mix(in srgb, var(--accent) 8%, var(--surface))
+    );
+  text-align: center;
+}
+
+.challenge-board h1,
+.challenge-board p {
+  margin: 0;
+}
+
+.challenge-kicker {
+  color: var(--muted);
+  font-size: clamp(0.8rem, calc(var(--board-size) * 0.031), 1rem);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.challenge-board h1 {
+  max-width: 100%;
+  color: var(--ink);
+  font-size: clamp(1.75rem, calc(var(--board-size) * 0.09), 3.1rem);
+  font-weight: 950;
+  line-height: 0.96;
+  overflow-wrap: anywhere;
+}
+
+.challenge-board p {
+  color: var(--muted);
+  font-size: clamp(0.9rem, calc(var(--board-size) * 0.035), 1.15rem);
+  font-weight: 800;
+}
+
+.challenge-board strong {
+  color: var(--warning);
+  font-size: clamp(2rem, calc(var(--board-size) * 0.11), 4rem);
+  font-weight: 950;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+}
+
+.challenge-board .button {
+  margin-top: 0.35rem;
 }
 
 .context-panel {

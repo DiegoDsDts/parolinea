@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ClipboardPaste, Play } from 'lucide-svelte';
   import type { GameConfig } from '../types';
-  import { boardToGridLetters, getBoardLetters, validateGameConfig } from '../services/gameConfig';
+  import { normalizeGameConfig, validateGameConfig } from '../services/gameConfig';
   import Modal from './Modal.svelte';
 
   export let open = false;
@@ -37,12 +37,7 @@
         return;
       }
 
-      onImport({
-        'grid-size': parsed['grid-size'],
-        'min-word-length': parsed['min-word-length'],
-        'duration-sec': parsed['duration-sec'],
-        letters: boardToGridLetters(getBoardLetters(parsed)),
-      });
+      onImport(normalizeGameConfig(parsed));
       close();
     } catch {
       error = 'JSON non valido.';

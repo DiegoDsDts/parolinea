@@ -16,7 +16,9 @@
   import {
     generateGameConfig,
     getBoardLetters,
+    getChallengeFrom,
     getSolutionScoreRange,
+    normalizeGameConfig,
     parseGridSize,
     type SolutionScoreRange,
   } from './lib/services/gameConfig';
@@ -40,6 +42,8 @@
   let activeTab: ActiveTab = 'game';
   let gameMode: GameMode = 'config';
   let gameConfig: GameConfig | null = null;
+  let pendingChallengeConfig: GameConfig | null = null;
+  let pendingChallengeOptions: StartGameOptions = {};
   let boardCells: BoardCell[][] = [];
   let board: string[][] = [];
   let selectedIndices: number[] = [];
@@ -93,6 +97,8 @@
     };
   });
   $: scorePercent = totalPossibleScore > 0 ? Math.round((totalScore / totalPossibleScore) * 100) : 0;
+  $: activeChallengeFrom = gameConfig ? getChallengeFrom(gameConfig) : null;
+  $: pendingChallengeFrom = pendingChallengeConfig ? getChallengeFrom(pendingChallengeConfig) : null;
   $: recapGridSize = gameConfig ? parseGridSize(gameConfig['grid-size']) : 4;
   $: staticTileFont = `calc(var(--board-size) * ${0.5 / recapGridSize})`;
   $: gameFinished = activeTab === 'game' && gameMode === 'finished';
@@ -108,7 +114,7 @@
       : $dictionaryStatus.wordsLoaded > 0
         ? `${$dictionaryStatus.wordsLoaded.toLocaleString('it-IT')} parole caricate`
         : 'Caricamento dizionario italiano';
-  $: exportJson = gameConfig ? JSON.stringify(gameConfig, null, 2) : '';
+  $: exportJson = gameConfig ? JSON.stringify(createSharedGameConfig(gameConfig, totalScore, displayPlayerName), null, 2) : '';
 
   onMount(() => {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
@@ -183,6 +189,18 @@
     calculationWordsFound = 0;
     generationAttempt = 0;
     generationTargetRange = null;
+  }
+
+  function createSharedGameConfig(config: GameConfig, points: number, name: string): GameConfig {
+    const normalizedConfig = normalizeGameConfig(config);
+    return {
+      ...normalizedConfig,
+      from: {
+        played: true,
+        name: name || 'Giocatore',
+        points,
+      },
+    };
   }
 
   function getSolutionScore(words: WordItem[]): number {
@@ -290,6 +308,28 @@
       gameMode = 'config';
       gameActive = false;
     }
+  }
+
+  function requestStartGame(config: GameConfig, options: StartGameOptions = {}) {
+    const challengeFrom = getChallengeFrom(config);
+    if (challengeFrom) {
+      pendingChallengeConfig = config;
+      pendingChallengeOptions = { ...options };
+      gameMode = 'challenge';
+      activeTab = 'game';
+      return;
+    }
+
+    startNewGame(config, options);
+  }
+
+  function startPendingChallenge() {
+    if (!pendingChallengeConfig) return;
+    const config = pendingChallengeConfig;
+    const options = pendingChallengeOptions;
+    pendingChallengeConfig = null;
+    pendingChallengeOptions = {};
+    startNewGame(config, options);
   }
 
   function isAdjacent(indexA: number, indexB: number): boolean {
@@ -518,6 +558,8 @@
     dictionaryClient.cancelSolve();
     resetRoundState();
     gameConfig = null;
+    pendingChallengeConfig = null;
+    pendingChallengeOptions = {};
     boardCells = [];
     gameMode = 'config';
     activeTab = 'game';
@@ -622,6 +664,9 @@
               <span class="score-points">{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'}</span>
               <span class="score-percent">{allSolutionsList.length > 0 ? scorePercent : '?'}%</span>
             </strong>
+            {#if activeChallengeFrom}
+              <span class="challenge-target">{activeChallengeFrom.name}: {activeChallengeFrom.points.toLocaleString('it-IT')} pt</span>
+            {/if}
             <GameTimer
               seconds={gameConfig['duration-sec']}
               active={gameActive}
@@ -629,6 +674,14 @@
               resetKey={timerResetKey}
               onEnd={() => endGame(false)}
             />
+          </div>
+        {:else if activeTab === 'game' && gameMode === 'challenge' && pendingChallengeFrom}
+          <div class="board-title">
+            <strong>Parolinea</strong>
+            <span>Sfida</span>
+          </div>
+          <div class="board-meta challenge-meta">
+            <span class="challenge-target">{pendingChallengeFrom.points.toLocaleString('it-IT')} pt</span>
           </div>
         {:else if activeTab === 'game' && gameMode === 'finished'}
           <div class="board-title">
@@ -689,10 +742,21 @@
             <HomeBoard
               dictionaryStatus={$dictionaryStatus}
               startSignal={homeStartSignal}
-              onStart={startNewGame}
+              onStart={requestStartGame}
               onInfo={() => setActiveTab('info')}
               onSettings={() => setActiveTab('settings')}
             />
+          {:else if gameMode === 'challenge' && pendingChallengeFrom}
+            <section class="challenge-board" aria-label="Sfida ricevuta">
+              <span class="challenge-kicker">Sfida ricevuta</span>
+              <h1>{pendingChallengeFrom.name}</h1>
+              <p>ha totalizzato</p>
+              <strong>{pendingChallengeFrom.points.toLocaleString('it-IT')} pt</strong>
+              <button class="button primary" type="button" on:click={startPendingChallenge}>
+                <Play size={18} />
+                Inizia sfida
+              </button>
+            </section>
           {:else if (gameMode === 'play' || gameMode === 'finished') && gameConfig}
             <div class="play-board-slot" class:finished={gameFinished}>
               <GameBoard
@@ -804,6 +868,10 @@
         <button class="button primary" type="button" on:click={startNewGameWithSameSettings}>
           <Play size={18} />
           Prossima Partita
+        </button>
+      {:else if activeTab === 'game' && gameMode === 'challenge'}
+        <button class="button secondary square home-toggle" type="button" aria-label="Home" on:click={goHome}>
+          <Home strokeWidth={1.8} />
         </button>
       {:else if activeTab === 'game' && gameMode === 'recap'}
         <button class="button secondary square home-toggle" type="button" aria-label="Home" on:click={goHome}>

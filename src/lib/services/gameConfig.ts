@@ -1,4 +1,4 @@
-import type { GameConfig, WordQuantityMode } from '../types';
+import type { GameChallengeFrom, GameConfig, WordQuantityMode } from '../types';
 import { createRandomBoard } from './letters';
 
 export interface SolutionScoreRange {
@@ -91,6 +91,29 @@ export function getBoardLetters(config: GameConfig): string[][] {
   return parseGridLetters(config.letters, parseGridSize(config['grid-size']));
 }
 
+export function getChallengeFrom(config: GameConfig): GameChallengeFrom | null {
+  const from = config.from;
+  if (!from || from.played !== true) return null;
+  if (typeof from.name !== 'string' || typeof from.points !== 'number') return null;
+
+  return {
+    played: true,
+    name: from.name.trim() || 'Giocatore',
+    points: from.points,
+  };
+}
+
+export function normalizeGameConfig(config: GameConfig): GameConfig {
+  const challengeFrom = getChallengeFrom(config);
+  return {
+    'grid-size': config['grid-size'],
+    'min-word-length': config['min-word-length'],
+    'duration-sec': config['duration-sec'],
+    letters: boardToGridLetters(getBoardLetters(config)),
+    ...(challengeFrom ? { from: challengeFrom } : {}),
+  };
+}
+
 export function validateGameConfig(config: unknown): { valid: boolean; error?: string } {
   if (!config || typeof config !== 'object') {
     return { valid: false, error: 'La configurazione deve essere un oggetto JSON.' };
@@ -149,6 +172,27 @@ export function validateGameConfig(config: unknown): { valid: boolean; error?: s
     candidate['duration-sec'] < 0
   ) {
     return { valid: false, error: 'La durata deve essere un numero intero non negativo.' };
+  }
+
+  if (candidate.from !== undefined) {
+    if (!candidate.from || typeof candidate.from !== 'object' || Array.isArray(candidate.from)) {
+      return { valid: false, error: 'Il campo from deve essere un oggetto.' };
+    }
+
+    const from = candidate.from as Partial<GameChallengeFrom>;
+    if (from.played !== undefined && typeof from.played !== 'boolean') {
+      return { valid: false, error: 'Il campo from.played deve essere booleano.' };
+    }
+
+    if (from.played === true) {
+      if (typeof from.name !== 'string' || !from.name.trim()) {
+        return { valid: false, error: 'Il campo from.name deve contenere il nome dello sfidante.' };
+      }
+
+      if (typeof from.points !== 'number' || !Number.isInteger(from.points) || from.points < 0) {
+        return { valid: false, error: 'Il campo from.points deve essere un intero non negativo.' };
+      }
+    }
   }
 
   return { valid: true };

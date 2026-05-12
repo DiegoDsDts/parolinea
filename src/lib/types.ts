@@ -1,4 +1,4 @@
-export type GameMode = 'config' | 'loading' | 'play' | 'finished' | 'recap';
+export type GameMode = 'config' | 'challenge' | 'loading' | 'play' | 'finished' | 'recap';
 export type ActiveTab = 'game' | 'info' | 'settings';
 export type FeedbackType = 'word-valid' | 'word-duplicate' | 'word-invalid' | null;
 export type ThemePreference = 'light' | 'dark' | 'system';
@@ -14,6 +14,19 @@ export interface GameConfig {
   'min-word-length': number;
   'duration-sec': number;
   letters: string;
+  from?: GameConfigFrom;
+}
+
+export interface GameChallengeFrom {
+  played: true;
+  name: string;
+  points: number;
+}
+
+export interface GameConfigFrom {
+  played?: boolean;
+  name?: string;
+  points?: number;
 }
 
 export interface BoardCell {
