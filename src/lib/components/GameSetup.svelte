@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Download, Edit3, Play, Shuffle } from 'lucide-svelte';
   import type { DictionaryStatus, GameConfig } from '../types';
-  import { createManualGameConfig, generateGameConfig } from '../services/gameConfig';
+  import { createManualGameConfig, generateGameConfig, getBoardLetters } from '../services/gameConfig';
   import { createEmptyBoard } from '../services/letters';
   import BoardPreview from './BoardPreview.svelte';
   import CustomSelect from './CustomSelect.svelte';
@@ -133,7 +133,7 @@
         </div>
       {:else}
         <div class="random-preview">
-          <BoardPreview board={sampleConfig.board_letters} {gridSize} />
+          <BoardPreview board={getBoardLetters(sampleConfig)} {gridSize} />
         </div>
       {/if}
     </section>

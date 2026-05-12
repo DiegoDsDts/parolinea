@@ -10,10 +10,10 @@ export interface StartGameOptions {
 }
 
 export interface GameConfig {
-  grid_size: string;
-  min_word_length: number;
-  duration_sec: number;
-  board_letters: string[][];
+  'grid-size': string;
+  'min-word-length': number;
+  'duration-sec': number;
+  letters: string;
 }
 
 export interface BoardCell {

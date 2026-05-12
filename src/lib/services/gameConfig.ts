@@ -22,10 +22,10 @@ export function generateGameConfig(
   gameDuration: number,
 ): GameConfig {
   return {
-    grid_size: `${gridSize}x${gridSize}`,
-    min_word_length: minWordLength,
-    duration_sec: gameDuration,
-    board_letters: createRandomBoard(gridSize),
+    'grid-size': `${gridSize}x${gridSize}`,
+    'min-word-length': minWordLength,
+    'duration-sec': gameDuration,
+    letters: boardToGridLetters(createRandomBoard(gridSize)),
   };
 }
 
@@ -36,10 +36,10 @@ export function createManualGameConfig(
   boardLetters: string[][],
 ): GameConfig {
   return {
-    grid_size: `${gridSize}x${gridSize}`,
-    min_word_length: minWordLength,
-    duration_sec: gameDuration,
-    board_letters: normalizeBoard(boardLetters),
+    'grid-size': `${gridSize}x${gridSize}`,
+    'min-word-length': minWordLength,
+    'duration-sec': gameDuration,
+    letters: boardToGridLetters(boardLetters),
   };
 }
 
@@ -72,6 +72,25 @@ export function normalizeBoard(board: string[][]): string[][] {
   );
 }
 
+export function boardToGridLetters(board: string[][]): string {
+  return normalizeBoard(board)
+    .map((row) => row.join('').toLowerCase())
+    .join(',');
+}
+
+export function parseGridLetters(gridLetters: string, gridSize: number): string[][] {
+  const rows = gridLetters.split(',').map((row) => row.trim());
+  if (rows.length !== gridSize || rows.some((row) => row.length !== gridSize)) {
+    throw new Error('Le lettere della griglia non corrispondono alla dimensione dichiarata.');
+  }
+
+  return rows.map((row) => row.split('').map((cell) => cell.toUpperCase()));
+}
+
+export function getBoardLetters(config: GameConfig): string[][] {
+  return parseGridLetters(config.letters, parseGridSize(config['grid-size']));
+}
+
 export function validateGameConfig(config: unknown): { valid: boolean; error?: string } {
   if (!config || typeof config !== 'object') {
     return { valid: false, error: 'La configurazione deve essere un oggetto JSON.' };
@@ -79,50 +98,55 @@ export function validateGameConfig(config: unknown): { valid: boolean; error?: s
 
   const candidate = config as Partial<GameConfig>;
   if (
-    !candidate.grid_size ||
-    !candidate.board_letters ||
-    candidate.min_word_length === undefined ||
-    candidate.duration_sec === undefined
+    !candidate['grid-size'] ||
+    candidate.letters === undefined ||
+    candidate['min-word-length'] === undefined ||
+    candidate['duration-sec'] === undefined
   ) {
     return { valid: false, error: 'Configurazione incompleta.' };
   }
 
   let gridSize: number;
   try {
-    gridSize = parseGridSize(candidate.grid_size);
+    gridSize = parseGridSize(candidate['grid-size']);
   } catch (error) {
     return { valid: false, error: error instanceof Error ? error.message : 'Griglia non valida.' };
   }
 
-  if (!Array.isArray(candidate.board_letters) || candidate.board_letters.length !== gridSize) {
+  if (typeof candidate.letters !== 'string') {
+    return { valid: false, error: 'Le lettere della griglia devono essere una stringa.' };
+  }
+
+  const rows = candidate.letters.split(',').map((row) => row.trim());
+  if (rows.length !== gridSize) {
     return { valid: false, error: 'Il numero di righe non corrisponde alla dimensione della griglia.' };
   }
 
-  for (const row of candidate.board_letters) {
-    if (!Array.isArray(row) || row.length !== gridSize) {
+  for (const row of rows) {
+    if (row.length !== gridSize) {
       return { valid: false, error: 'Il numero di colonne non corrisponde alla dimensione della griglia.' };
     }
 
     for (const cell of row) {
-      if (typeof cell !== 'string' || !/^[A-Za-z]$/.test(cell.trim())) {
+      if (!/^[A-Za-z]$/.test(cell)) {
         return { valid: false, error: 'Ogni cella deve contenere una sola lettera.' };
       }
     }
   }
 
   if (
-    typeof candidate.min_word_length !== 'number' ||
-    !Number.isInteger(candidate.min_word_length) ||
-    candidate.min_word_length < 2 ||
-    candidate.min_word_length > 12
+    typeof candidate['min-word-length'] !== 'number' ||
+    !Number.isInteger(candidate['min-word-length']) ||
+    candidate['min-word-length'] < 2 ||
+    candidate['min-word-length'] > 12
   ) {
     return { valid: false, error: 'La lunghezza minima deve essere un intero tra 2 e 12.' };
   }
 
   if (
-    typeof candidate.duration_sec !== 'number' ||
-    !Number.isInteger(candidate.duration_sec) ||
-    candidate.duration_sec < 0
+    typeof candidate['duration-sec'] !== 'number' ||
+    !Number.isInteger(candidate['duration-sec']) ||
+    candidate['duration-sec'] < 0
   ) {
     return { valid: false, error: 'La durata deve essere un numero intero non negativo.' };
   }

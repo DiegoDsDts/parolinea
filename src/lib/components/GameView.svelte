@@ -27,7 +27,7 @@
   export let onEndGame: (manual: boolean) => void = () => {};
   export let onWordSelect: (word: string) => void = () => {};
 
-  $: gridSize = parseGridSize(gameConfig.grid_size);
+  $: gridSize = parseGridSize(gameConfig['grid-size']);
   $: boardCells = board.map((row, rowIndex) =>
     row.map((letter, colIndex) => ({
       id: `${rowIndex}-${colIndex}`,
@@ -42,7 +42,7 @@
     <div class="score-timer">
       <strong>{totalScore} / {allSolutionsCount > 0 ? totalPossibleScore : '?'}</strong>
       <GameTimer
-        seconds={gameConfig.duration_sec}
+        seconds={gameConfig['duration-sec']}
         active={gameActive}
         paused={isPaused}
         resetKey={timerResetKey}

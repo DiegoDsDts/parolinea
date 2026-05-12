@@ -15,6 +15,7 @@
   import { dictionaryClient, dictionaryStatus } from './lib/services/dictionaryClient';
   import {
     generateGameConfig,
+    getBoardLetters,
     getSolutionScoreRange,
     parseGridSize,
     type SolutionScoreRange,
@@ -90,7 +91,7 @@
     };
   });
   $: scorePercent = totalPossibleScore > 0 ? Math.round((totalScore / totalPossibleScore) * 100) : 0;
-  $: recapGridSize = gameConfig ? parseGridSize(gameConfig.grid_size) : 4;
+  $: recapGridSize = gameConfig ? parseGridSize(gameConfig['grid-size']) : 4;
   $: staticTileFont = `calc(var(--board-size) * ${0.45 / recapGridSize})`;
   $: loadingVisible = $dictionaryStatus.loading || gameMode === 'loading';
   $: loadingTitle = gameMode === 'loading' ? 'Creazione dello schema' : 'Avvio di Parolinea';
@@ -211,8 +212,8 @@
     activeTab = 'game';
 
     try {
-      const gridSize = parseGridSize(config.grid_size);
-      generationTargetRange = getSolutionScoreRange(options.wordQuantityMode ?? 'random', gridSize, config.min_word_length);
+      const gridSize = parseGridSize(config['grid-size']);
+      generationTargetRange = getSolutionScoreRange(options.wordQuantityMode ?? 'random', gridSize, config['min-word-length']);
       const maxAttempts = generationTargetRange ? TARGETED_BOARD_ATTEMPT_LIMIT : 1;
       let selectedConfig = config;
       let selectedSolutions: WordItem[] = [];
@@ -226,11 +227,12 @@
         const candidateConfig =
           attempt === 1
             ? config
-            : generateGameConfig(gridSize, config.min_word_length, config.duration_sec);
+            : generateGameConfig(gridSize, config['min-word-length'], config['duration-sec']);
+        const candidateBoardLetters = getBoardLetters(candidateConfig);
         const solutions = await dictionaryClient.solveBoard(
-          candidateConfig.board_letters.flat(),
+          candidateBoardLetters.flat(),
           gridSize,
-          candidateConfig.min_word_length,
+          candidateConfig['min-word-length'],
           ({ progress, wordsFound }) => {
             calculationProgress = progress;
             calculationWordsFound = wordsFound;
@@ -262,7 +264,7 @@
       }
 
       gameConfig = selectedConfig;
-      boardCells = createBoardCells(selectedConfig.board_letters);
+      boardCells = createBoardCells(getBoardLetters(selectedConfig));
       allSolutionsList = selectedSolutions;
       gameMode = 'play';
       gameActive = true;
@@ -278,7 +280,7 @@
 
   function isAdjacent(indexA: number, indexB: number): boolean {
     if (!gameConfig) return false;
-    const gridSize = parseGridSize(gameConfig.grid_size);
+    const gridSize = parseGridSize(gameConfig['grid-size']);
     const rowA = Math.floor(indexA / gridSize);
     const colA = indexA % gridSize;
     const rowB = Math.floor(indexB / gridSize);
@@ -289,7 +291,7 @@
 
   function updateCurrentWord(indices: number[]) {
     if (!gameConfig) return;
-    const gridSize = parseGridSize(gameConfig.grid_size);
+    const gridSize = parseGridSize(gameConfig['grid-size']);
     currentWord = indices
       .map((index) => {
         const row = Math.floor(index / gridSize);
@@ -364,7 +366,7 @@
   function handleDiceRelease() {
     if (!gameConfig || !gameActive || isPaused) return;
 
-    if (currentWord.length >= gameConfig.min_word_length) {
+    if (currentWord.length >= gameConfig['min-word-length']) {
       submitCurrentWord();
       return;
     }
@@ -410,7 +412,7 @@
         if (foundWords.has(submittedWord)) {
           feedbackType = 'word-duplicate';
         } else {
-          const score = getWordScore(submittedWord, gameConfig.min_word_length);
+          const score = getWordScore(submittedWord, gameConfig['min-word-length']);
           foundWords = new Set(foundWords).add(submittedWord);
           foundWordsList = sortWords([...foundWordsList, { word: submittedWord, score }]);
           feedbackType = 'word-valid';
@@ -517,9 +519,9 @@
 
   function startNewGameWithSameSettings() {
     if (!gameConfig) return;
-    const gridSize = parseGridSize(gameConfig.grid_size);
+    const gridSize = parseGridSize(gameConfig['grid-size']);
     startNewGame(
-      generateGameConfig(gridSize, gameConfig.min_word_length, gameConfig.duration_sec),
+      generateGameConfig(gridSize, gameConfig['min-word-length'], gameConfig['duration-sec']),
       lastGameOptions,
     );
   }
@@ -569,9 +571,12 @@
             {currentWord || ''}
           </div>
           <div class="board-meta">
-            <strong>{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'} ({allSolutionsList.length > 0 ? scorePercent : '?'}%)</strong>
+            <strong class="score-summary">
+              <span class="score-points">{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'}</span>
+              <span class="score-percent">{allSolutionsList.length > 0 ? scorePercent : '?'}%</span>
+            </strong>
             <GameTimer
-              seconds={gameConfig.duration_sec}
+              seconds={gameConfig['duration-sec']}
               active={gameActive}
               paused={isPaused}
               resetKey={timerResetKey}
@@ -584,7 +589,10 @@
             <span>Riepilogo</span>
           </div>
           <div class="board-meta">
-            <strong>{totalScore} / {totalPossibleScore} ({scorePercent}%)</strong>
+            <strong class="score-summary">
+              <span class="score-points">{totalScore} / {totalPossibleScore}</span>
+              <span class="score-percent">{scorePercent}%</span>
+            </strong>
           </div>
         {:else if activeTab === 'info'}
           <div class="board-title">
@@ -629,7 +637,7 @@
                 {boardCells}
                 {selectedIndices}
                 {feedbackType}
-                gridSize={parseGridSize(gameConfig.grid_size)}
+                gridSize={parseGridSize(gameConfig['grid-size'])}
                 {isPaused}
                 onDiceSelectStart={handleDicePress}
                 onDiceSelectMove={handleDiceMove}
@@ -639,7 +647,7 @@
             </div>
           {:else if gameMode === 'recap' && gameConfig}
             <div class="static-board" style={`--grid-size: ${recapGridSize}; --static-tile-font: ${staticTileFont};`}>
-              {#each gameConfig.board_letters as row}
+              {#each getBoardLetters(gameConfig) as row}
                 {#each row as letter}
                   <div class="static-tile">{letter}</div>
                 {/each}

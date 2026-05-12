@@ -13,7 +13,7 @@
   export let onHome: () => void = () => {};
   export let onWordSelect: (word: string) => void = () => {};
 
-  $: gridSize = parseGridSize(gameConfig.grid_size);
+  $: gridSize = parseGridSize(gameConfig['grid-size']);
   $: totalScore = foundWordsList.reduce((sum, item) => sum + item.score, 0);
   $: totalPossibleScore = allSolutionsList.reduce((sum, item) => sum + item.score, 0);
   $: foundWords = new Set(foundWordsList.map((item) => item.word));
@@ -58,11 +58,11 @@
           </div>
           <div>
             <dt>Lunghezza min.</dt>
-            <dd>{gameConfig.min_word_length}</dd>
+            <dd>{gameConfig['min-word-length']}</dd>
           </div>
           <div>
             <dt>Tempo</dt>
-            <dd>{formatDuration(gameConfig.duration_sec)}</dd>
+            <dd>{formatDuration(gameConfig['duration-sec'])}</dd>
           </div>
         </dl>
       </div>
