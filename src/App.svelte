@@ -22,7 +22,7 @@
     parseGridSize,
     type SolutionScoreRange,
   } from './lib/services/gameConfig';
-  import { getWordScore, sortWords } from './lib/services/scoring';
+  import { getWordScore } from './lib/services/scoring';
   import type {
     ActiveTab,
     BoardCell,
@@ -489,7 +489,7 @@
         } else {
           const score = getWordScore(submittedWord, gameConfig['min-word-length']);
           const nextFoundWords = new Set(foundWords).add(submittedWord);
-          const nextFoundWordsList = sortWords([...foundWordsList, { word: submittedWord, score }]);
+          const nextFoundWordsList = [{ word: submittedWord, score }, ...foundWordsList];
           foundWords = nextFoundWords;
           foundWordsList = nextFoundWordsList;
           feedbackType = 'word-valid';
