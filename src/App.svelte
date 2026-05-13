@@ -38,6 +38,7 @@
   const THEME_STORAGE_KEY = 'parolinea/theme-preference';
   const PLAYER_NAME_STORAGE_KEY = 'parolinea/player-name';
   const TARGETED_BOARD_ATTEMPT_LIMIT = 240;
+  const RANDOM_BOARD_ATTEMPT_LIMIT = 240;
 
   let activeTab: ActiveTab = 'game';
   let gameMode: GameMode = 'config';
@@ -246,7 +247,7 @@
     try {
       const gridSize = parseGridSize(config['grid-size']);
       generationTargetRange = getSolutionScoreRange(options.wordQuantityMode ?? 'random', gridSize, config['min-word-length']);
-      const maxAttempts = generationTargetRange ? TARGETED_BOARD_ATTEMPT_LIMIT : 1;
+      const maxAttempts = generationTargetRange ? TARGETED_BOARD_ATTEMPT_LIMIT : RANDOM_BOARD_ATTEMPT_LIMIT;
       let selectedConfig = config;
       let selectedSolutions: WordItem[] = [];
       let bestCandidate: { config: GameConfig; solutions: WordItem[]; distance: number } | null = null;
@@ -273,6 +274,10 @@
 
         if (generationVersion !== currentGenerationVersion) return;
 
+        if (solutions.length === 0) {
+          continue;
+        }
+
         const possibleScore = getSolutionScore(solutions);
         if (isScoreInRange(possibleScore, generationTargetRange)) {
           selectedConfig = candidateConfig;
@@ -293,6 +298,10 @@
         selectedConfig = bestCandidate.config;
         selectedSolutions = bestCandidate.solutions;
         showToast('Range non trovato: avvio lo schema piu vicino.');
+      }
+
+      if (selectedSolutions.length === 0) {
+        throw new Error('Non sono riuscito a generare uno schema con soluzioni. Riprova.');
       }
 
       gameConfig = selectedConfig;
