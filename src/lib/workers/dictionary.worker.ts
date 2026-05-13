@@ -65,7 +65,7 @@ class Trie {
   }
 }
 
-const dictionaryUrl = new URL('../assets/660000_parole_italiane.txt', import.meta.url);
+const dictionaryUrl = new URL('../assets/dictionary-merged-italian.txt', import.meta.url);
 let trie: Trie | null = null;
 let wordsLoaded = 0;
 let initPromise: Promise<void> | null = null;
