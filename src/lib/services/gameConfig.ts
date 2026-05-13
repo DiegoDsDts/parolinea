@@ -68,23 +68,56 @@ export function formatSolutionScoreRange(range: SolutionScoreRange | null): stri
 
 export function normalizeBoard(board: string[][]): string[][] {
   return board.map((row) =>
-    row.map((cell) => cell.trim().slice(0, 1).toUpperCase()),
+    row.map((cell) => {
+      const normalized = cell.trim().toUpperCase();
+      if (normalized === 'QU') return 'QU';
+      return normalized.slice(0, 1);
+    }),
   );
+}
+
+function encodeGridCell(cell: string): string {
+  return cell === 'QU' ? '(qu)' : cell.toLowerCase();
+}
+
+function parseGridRow(row: string): string[] {
+  const cells: string[] = [];
+
+  for (let index = 0; index < row.length;) {
+    if (row.slice(index, index + 4).toLowerCase() === '(qu)') {
+      cells.push('QU');
+      index += 4;
+      continue;
+    }
+
+    const cell = row[index];
+    if (cell && /[A-Za-z]/.test(cell)) {
+      cells.push(cell.toUpperCase());
+      index += 1;
+      continue;
+    }
+
+    throw new Error(`Cella non valida: ${cell}`);
+  }
+
+  return cells;
 }
 
 export function boardToGridLetters(board: string[][]): string {
   return normalizeBoard(board)
-    .map((row) => row.join('').toLowerCase())
+    .map((row) => row.map(encodeGridCell).join(''))
     .join(',');
 }
 
 export function parseGridLetters(gridLetters: string, gridSize: number): string[][] {
   const rows = gridLetters.split(',').map((row) => row.trim());
-  if (rows.length !== gridSize || rows.some((row) => row.length !== gridSize)) {
+  const parsedRows = rows.map(parseGridRow);
+
+  if (rows.length !== gridSize || parsedRows.some((row) => row.length !== gridSize)) {
     throw new Error('Le lettere della griglia non corrispondono alla dimensione dichiarata.');
   }
 
-  return rows.map((row) => row.split('').map((cell) => cell.toUpperCase()));
+  return parsedRows;
 }
 
 export function getBoardLetters(config: GameConfig): string[][] {
@@ -140,21 +173,10 @@ export function validateGameConfig(config: unknown): { valid: boolean; error?: s
     return { valid: false, error: 'Le lettere della griglia devono essere una stringa.' };
   }
 
-  const rows = candidate.letters.split(',').map((row) => row.trim());
-  if (rows.length !== gridSize) {
-    return { valid: false, error: 'Il numero di righe non corrisponde alla dimensione della griglia.' };
-  }
-
-  for (const row of rows) {
-    if (row.length !== gridSize) {
-      return { valid: false, error: 'Il numero di colonne non corrisponde alla dimensione della griglia.' };
-    }
-
-    for (const cell of row) {
-      if (!/^[A-Za-z]$/.test(cell)) {
-        return { valid: false, error: 'Ogni cella deve contenere una sola lettera.' };
-      }
-    }
+  try {
+    parseGridLetters(candidate.letters, gridSize);
+  } catch {
+    return { valid: false, error: 'Le lettere della griglia non corrispondono alla dimensione dichiarata.' };
   }
 
   if (
