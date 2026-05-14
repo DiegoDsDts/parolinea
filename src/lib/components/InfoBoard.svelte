@@ -1,7 +1,10 @@
 <script lang="ts">
-  import { ArrowLeft } from 'lucide-svelte';
+  import { ArrowLeft, BookOpen } from 'lucide-svelte';
+  import Modal from './Modal.svelte';
 
   export let onBack: () => void = () => {};
+
+  let rulesOpen = false;
 
   const scoreRows = [
     { length: 'Minima', score: '1' },
@@ -35,8 +38,33 @@
   </button>
 
   <div class="info-tile empty-tile empty-tile-a" aria-hidden="true"></div>
-  <div class="info-tile empty-tile empty-tile-b" aria-hidden="true"></div>
+  <button class="info-tile rules-tile" type="button" on:click={() => (rulesOpen = true)}>
+    <BookOpen size={23} />
+    <h2>Regole</h2>
+    <p>Paroliere</p>
+  </button>
 </div>
+
+<Modal open={rulesOpen} title="Regole" onClose={() => (rulesOpen = false)}>
+  <div class="rules-copy">
+    <p>
+      Trova parole collegando lettere adiacenti sulla griglia. Puoi muoverti in orizzontale,
+      verticale o diagonale.
+    </p>
+    <p>
+      Ogni casella può essere usata una sola volta nella stessa parola. La parola deve rispettare
+      la lunghezza minima impostata per la partita.
+    </p>
+    <p>
+      Sono valide solo le parole presenti nel dizionario del gioco. Quando il tempo scade, la partita
+      finisce e puoi vedere tutte le soluzioni disponibili.
+    </p>
+    <p>
+      Le parole più lunghe valgono più punti. A parità di schema, vince chi trova più parole e ottiene
+      il punteggio migliore.
+    </p>
+  </div>
+</Modal>
 
 <style>
   .info-board {
@@ -152,8 +180,20 @@
     grid-row: 3;
   }
 
-  .empty-tile-b {
+  .rules-tile {
     grid-column: 3;
     grid-row: 3;
+  }
+
+  .rules-copy {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .rules-copy p {
+    color: var(--ink);
+    font-size: 0.95rem;
+    line-height: 1.45;
+    text-align: left;
   }
 </style>
