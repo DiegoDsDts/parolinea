@@ -78,6 +78,8 @@
   let homeStartSignal = 0;
   let generationVersion = 0;
   let lastGameOptions: StartGameOptions = {};
+  let finishedSolutionsRevealQueued = false;
+  let ignoreFinishedSolutionsClick = false;
 
   let themePreference: ThemePreference = 'system';
   let playerName = '';
@@ -85,6 +87,7 @@
 
   $: effectiveTheme = themePreference === 'system' ? systemTheme : themePreference;
   $: document.documentElement.dataset.theme = effectiveTheme;
+  $: syncBrowserThemeChrome(effectiveTheme);
   $: board = boardCells.map((row) => row.map((cell) => cell.letter));
   $: totalScore = foundWordsList.reduce((sum, item) => sum + item.score, 0);
   $: totalPossibleScore = allSolutionsList.reduce((sum, item) => sum + item.score, 0);
@@ -115,6 +118,14 @@
         ? `${$dictionaryStatus.wordsLoaded.toLocaleString('it-IT')} parole caricate`
         : 'Caricamento dizionario italiano';
   $: exportJson = gameConfig ? JSON.stringify(createSharedGameConfig(gameConfig, totalScore, displayPlayerName), null, 2) : '';
+
+  function syncBrowserThemeChrome(theme: EffectiveTheme) {
+    const themeColor = theme === 'dark' ? '#191b18' : '#f7f5ef';
+    document.querySelector('meta[name="theme-color"]:not([media])')?.setAttribute('content', themeColor);
+    document
+      .querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+      ?.setAttribute('content', theme === 'dark' ? 'black-translucent' : 'default');
+  }
 
   onMount(() => {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
@@ -419,6 +430,22 @@
 
   function showFinishedSolutions(event?: Event) {
     event?.preventDefault();
+
+    if (event?.type === 'pointerup') {
+      if (finishedSolutionsRevealQueued) return;
+
+      finishedSolutionsRevealQueued = true;
+      ignoreFinishedSolutionsClick = true;
+
+      window.setTimeout(() => {
+        finishedSolutionsRevealQueued = false;
+        ignoreFinishedSolutionsClick = false;
+        showSolutions();
+      }, 0);
+      return;
+    }
+
+    if (ignoreFinishedSolutionsClick) return;
     showSolutions();
   }
 

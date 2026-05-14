@@ -4,10 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f7f5ef" />
+    <meta name="theme-color" content="#191b18" media="(prefers-color-scheme: dark)" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Parolinea" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script>
+      (() => {
+        const lightColor = '#f7f5ef';
+        const darkColor = '#191b18';
+        const storageKey = 'parolinea/theme-preference';
+        const storedTheme = localStorage.getItem(storageKey);
+        const systemDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+        const effectiveTheme = storedTheme === 'dark' || (storedTheme !== 'light' && systemDark) ? 'dark' : 'light';
+        const themeColor = effectiveTheme === 'dark' ? darkColor : lightColor;
+
+        document.documentElement.dataset.theme = effectiveTheme;
+        document.querySelector('meta[name="theme-color"]:not([media])')?.setAttribute('content', themeColor);
+        document
+          .querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+          ?.setAttribute('content', effectiveTheme === 'dark' ? 'black-translucent' : 'default');
+      })();
+    </script>
     <meta
       name="description"
       content="Parolinea"
