@@ -80,6 +80,7 @@
   let lastGameOptions: StartGameOptions = {};
   let finishedSolutionsRevealQueued = false;
   let ignoreFinishedSolutionsClick = false;
+  let suppressDefinitionUntil = 0;
 
   let themePreference: ThemePreference = 'system';
   let playerName = '';
@@ -122,9 +123,6 @@
   function syncBrowserThemeChrome(theme: EffectiveTheme) {
     const themeColor = theme === 'dark' ? '#191b18' : '#f7f5ef';
     document.querySelector('meta[name="theme-color"]:not([media])')?.setAttribute('content', themeColor);
-    document
-      .querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
-      ?.setAttribute('content', theme === 'dark' ? 'black-translucent' : 'default');
   }
 
   onMount(() => {
@@ -430,6 +428,7 @@
 
   function showFinishedSolutions(event?: Event) {
     event?.preventDefault();
+    suppressDefinitionUntil = Date.now() + 700;
 
     if (event?.type === 'pointerup') {
       if (finishedSolutionsRevealQueued) return;
@@ -672,6 +671,7 @@
   }
 
   function openDefinition(word: string) {
+    if (Date.now() < suppressDefinitionUntil) return;
     selectedDefinitionWord = word;
     definitionOpen = true;
   }

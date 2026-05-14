@@ -55,6 +55,10 @@ body,
   margin: 0;
 }
 
+html {
+  background: var(--background);
+}
+
 body {
   overflow: hidden;
   color: var(--ink);
@@ -92,7 +96,7 @@ a:focus-visible {
   --board-size: min(
     34rem,
     calc(100vw - 1.5rem),
-    calc(100dvh - var(--top-space) - var(--board-info-height) - var(--min-context-height) - var(--command-height) - 2.4rem)
+    calc(100dvh - env(safe-area-inset-top) - var(--top-space) - var(--board-info-height) - var(--min-context-height) - var(--command-height) - 2.4rem)
   );
 
   min-height: 0;
@@ -100,7 +104,11 @@ a:focus-visible {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) var(--command-height);
   gap: 0.55rem;
-  padding: 0 max(0.75rem, env(safe-area-inset-left)) 0 max(0.75rem, env(safe-area-inset-right));
+  padding:
+    env(safe-area-inset-top)
+    max(0.75rem, env(safe-area-inset-left))
+    0
+    max(0.75rem, env(safe-area-inset-right));
 }
 
 .button,
