@@ -126,6 +126,38 @@
       text: 'Il mio linguaggio è la puttana di tutti che io rendo vergine.',
       author: 'Karl Kraus',
     },
+    {
+      text: 'Il grande nemico del linguaggio chiaro è l\'insincerità.',
+      author: 'George Orwell',
+    },
+    {
+      text: 'Il linguaggio è una pelle: strofino il mio linguaggio contro l\'altro.',
+      author: 'Roland Barthes',
+    },
+    {
+      text: 'Nella lingua non vi sono che differenze',
+      author: 'Ferdinand De Saussure',
+    },
+    {
+      text: 'Ho fatto questa lettera più lunga del solito solo perché non ho avuto il tempo di farla più breve.',
+      author: 'Blaise Pascal',
+    },
+    {
+      text: 'La differenza tra la parola quasi giusta e la parola giusta è davvero grande: è la differenza tra la lucciola e il fulmine.',
+      author: 'Mark Twain',
+    },
+    {
+      text: 'Il leggere rende un uomo completo, il parlare lo rende pronto, e lo scrivere lo rende preciso.',
+      author: 'Benjamin Franklin',
+    },
+    {
+      text: 'La parola è del tempo, il silenzio è dell\'eternità.',
+      author: 'Thomas Carlyle',
+    },
+    {
+      text: 'Quando sappiamo quanto valgono le parole, la cosa sorprendente è che proviamo comunque a dire qualcosa, e che riusciamo a farlo.',
+      author: 'Emil Cioran',
+    },
   ];
 
   const MAX_QUOTE_SIZE_REM = 1.18;
