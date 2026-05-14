@@ -89,7 +89,7 @@
     </button>
     <button class="button danger" type="button" on:click={() => onEndGame(true)}>
       <Square size={16} />
-      Fine
+      Termina
     </button>
   </footer>
 </section>

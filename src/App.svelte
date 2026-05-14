@@ -602,10 +602,10 @@
   function endGame(manual: boolean) {
     if (manual) {
       openConfirm({
-        title: 'Mostra soluzioni',
-        message: 'Vuoi chiudere la partita e vedere tutte le soluzioni?',
-        confirmLabel: 'Mostra',
-        onConfirm: showSolutions,
+        title: 'Termina partita',
+        message: 'Stai per terminare la partita. Potrai vedere le soluzioni dalla schermata di fine partita.',
+        confirmLabel: 'Termina',
+        onConfirm: finishGame,
       });
       return;
     }
@@ -872,7 +872,7 @@
         </button>
         <button class="button reveal" type="button" on:click={() => endGame(true)}>
           <ArrowRightToLine size={19} />
-          Soluzioni
+          Termina
         </button>
       {:else if activeTab === 'game' && gameMode === 'finished'}
         <button class="button secondary square home-toggle" type="button" aria-label="Home" on:click={goHome}>

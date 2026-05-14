@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { AlertTriangle } from 'lucide-svelte';
   import Modal from './Modal.svelte';
 
   export let open = false;
@@ -14,10 +13,6 @@
 
 <Modal {open} {title} onClose={onCancel}>
   <div class="confirm">
-    <div class:danger class="confirm-icon" aria-hidden="true">
-      <AlertTriangle size={24} />
-    </div>
-
     <p>{message}</p>
 
     <div class="confirm-actions">
@@ -33,23 +28,6 @@
     justify-items: center;
     gap: 1rem;
     text-align: center;
-  }
-
-  .confirm-icon {
-    width: 3rem;
-    height: 3rem;
-    display: grid;
-    place-items: center;
-    border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
-    border-radius: 0;
-    background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-    color: var(--accent-strong);
-  }
-
-  .confirm-icon.danger {
-    border-color: color-mix(in srgb, var(--danger) 42%, var(--border));
-    background: color-mix(in srgb, var(--danger) 8%, var(--surface));
-    color: var(--danger);
   }
 
   p {
