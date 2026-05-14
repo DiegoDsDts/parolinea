@@ -597,6 +597,9 @@ a:focus-visible {
   color: var(--ink);
   text-align: left;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
   overflow: hidden;
   transition:
     background 120ms ease,

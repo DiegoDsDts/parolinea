@@ -418,6 +418,11 @@
     gameMode = 'recap';
   }
 
+  function showFinishedSolutions(event?: Event) {
+    event?.preventDefault();
+    showSolutions();
+  }
+
   function handleDicePress(index: number) {
     if (!gameActive || isPaused) return;
     clearFeedbackTimer();
@@ -814,7 +819,12 @@
         />
       {:else if activeTab === 'game' && gameMode === 'finished'}
         <section class="finished-panel" aria-label="Partita finita">
-          <button class="finished-solutions" type="button" on:click={showSolutions}>
+          <button
+            class="finished-solutions"
+            type="button"
+            on:pointerup={showFinishedSolutions}
+            on:click={showFinishedSolutions}
+          >
             <span class="finished-kicker">Partita finita</span>
             <strong>Vedi soluzioni</strong>
             <span class="finished-detail">{foundWordsList.length} parole trovate su {allSolutionsList.length}</span>
