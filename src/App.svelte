@@ -102,7 +102,6 @@
   $: pendingChallengeFrom = pendingChallengeConfig ? getChallengeFrom(pendingChallengeConfig) : null;
   $: recapGridSize = gameConfig ? parseGridSize(gameConfig['grid-size']) : 4;
   $: staticTileFont = `calc(var(--board-size) * ${0.5 / recapGridSize})`;
-  $: gameFinished = activeTab === 'game' && gameMode === 'finished';
   $: displayPlayerName = playerName.trim();
   $: playerNameFontSize = displayPlayerName
     ? `clamp(0.58rem, min(calc(var(--board-size) * 0.036), ${17 / Math.max(displayPlayerName.length, 1)}rem), 1.08rem)`
@@ -700,7 +699,6 @@
         {:else if activeTab === 'game' && gameMode === 'finished'}
           <div class="board-title">
             <strong>Fine partita</strong>
-            <span>{foundWordsList.length} / {allSolutionsList.length} parole</span>
           </div>
           <div class="board-meta">
             <strong class="score-summary">
@@ -710,8 +708,7 @@
           </div>
         {:else if activeTab === 'game' && gameMode === 'recap'}
           <div class="board-title">
-            <strong>Parolinea</strong>
-            <span>Riepilogo</span>
+            <strong>Riepilogo</strong>
           </div>
           <div class="board-meta">
             <strong class="score-summary">
@@ -771,22 +768,21 @@
                 Inizia sfida
               </button>
             </section>
-          {:else if (gameMode === 'play' || gameMode === 'finished') && gameConfig}
-            <div class="play-board-slot" class:finished={gameFinished}>
+          {:else if gameMode === 'play' && gameConfig}
+            <div class="play-board-slot">
               <GameBoard
                 {boardCells}
                 {selectedIndices}
                 {feedbackType}
                 gridSize={parseGridSize(gameConfig['grid-size'])}
                 {isPaused}
-                disabled={gameFinished}
                 onDiceSelectStart={handleDicePress}
                 onDiceSelectMove={handleDiceMove}
                 onDiceSelectEnd={handleDiceRelease}
                 onDiceTap={handleDiceTap}
               />
             </div>
-          {:else if gameMode === 'recap' && gameConfig}
+          {:else if (gameMode === 'finished' || gameMode === 'recap') && gameConfig}
             <div class="static-board" style={`--grid-size: ${recapGridSize}; --static-tile-font: ${staticTileFont};`}>
               {#each getBoardLetters(gameConfig) as row}
                 {#each row as letter}
