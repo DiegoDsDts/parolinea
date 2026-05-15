@@ -244,13 +244,17 @@
     return new Map(entries.map(([pathPrefix, words]) => [pathPrefix, new Set(words)]));
   }
 
-  function getDiscoveryPathFeedback(indices: number[]): 'dead' | 'exhausted' | null {
+  function getDiscoveryPathFeedback(indices: number[]): 'dead' | 'exhausted' | 'valid' | null {
     if (!discoveryMode || !gameActive || feedbackType || indices.length === 0) return null;
 
     const pathPrefix = serializeIndexPath(indices);
     if (!solutionPathPrefixes.has(pathPrefix)) return 'dead';
 
     const reachableWords = solutionPathWords.get(pathPrefix);
+    if (currentWord.length >= (gameConfig?.['min-word-length'] ?? 0) && reachableWords?.has(currentWord) && !foundWords.has(currentWord)) {
+      return 'valid';
+    }
+
     if (reachableWords && reachableWords.size > 0 && Array.from(reachableWords).every((word) => foundWords.has(word))) {
       return 'exhausted';
     }
