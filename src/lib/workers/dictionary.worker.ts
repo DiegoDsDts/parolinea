@@ -1,5 +1,5 @@
 import { getWordScore } from '../services/scoring';
-import type { WordItem } from '../types';
+import type { SolveBoardResult, WordItem } from '../types';
 
 type IncomingMessage =
   | { type: 'init' }
@@ -141,6 +141,10 @@ function sortSolutions(words: Set<string>, minWordLength: number): WordItem[] {
     });
 }
 
+function serializePath(path: number[], length = path.length): string {
+  return path.slice(0, length).join(',');
+}
+
 function solveBoard(
   requestId: number,
   board: string[],
@@ -157,15 +161,19 @@ function solveBoard(
   const totalCells = gridSize * gridSize;
   const adjacencyList = buildAdjacencyList(gridSize);
   const possibleWords = new Set<string>();
+  const viablePathPrefixes = new Set<string>();
+  const pathPrefixWords = new Map<string, Set<string>>();
   let startIndex = 0;
 
   const findWordsStartingAt = (
     index: number,
     visited: boolean[],
     currentWord: string,
+    currentPath: number[],
   ) => {
     visited[index] = true;
     const nextWord = currentWord + lowerBoard[index];
+    const nextPath = [...currentPath, index];
 
     if (!trie!.hasPrefix(nextWord)) {
       visited[index] = false;
@@ -174,11 +182,20 @@ function solveBoard(
 
     if (nextWord.length >= minWordLength && trie!.contains(nextWord)) {
       possibleWords.add(nextWord);
+
+      for (let length = 1; length <= nextPath.length; length += 1) {
+        const pathPrefix = serializePath(nextPath, length);
+        viablePathPrefixes.add(pathPrefix);
+
+        const prefixWords = pathPrefixWords.get(pathPrefix) ?? new Set<string>();
+        prefixWords.add(nextWord);
+        pathPrefixWords.set(pathPrefix, prefixWords);
+      }
     }
 
     for (const neighbor of adjacencyList[index]) {
       if (!visited[neighbor]) {
-        findWordsStartingAt(neighbor, visited, nextWord);
+        findWordsStartingAt(neighbor, visited, nextWord, nextPath);
       }
     }
 
@@ -194,7 +211,7 @@ function solveBoard(
     const end = Math.min(startIndex + 2, totalCells);
 
     while (startIndex < end) {
-      findWordsStartingAt(startIndex, Array.from({ length: totalCells }, () => false), '');
+      findWordsStartingAt(startIndex, Array.from({ length: totalCells }, () => false), '', []);
       startIndex += 1;
     }
 
@@ -206,10 +223,16 @@ function solveBoard(
     });
 
     if (startIndex >= totalCells) {
+      const result: SolveBoardResult = {
+        words: sortSolutions(possibleWords, minWordLength),
+        pathPrefixes: Array.from(viablePathPrefixes),
+        pathPrefixWords: Array.from(pathPrefixWords, ([pathPrefix, words]) => [pathPrefix, Array.from(words)]),
+      };
+
       postMessage({
         type: 'solve-result',
         requestId,
-        words: sortSolutions(possibleWords, minWordLength),
+        result,
       });
     } else {
       setTimeout(processBatch, 0);

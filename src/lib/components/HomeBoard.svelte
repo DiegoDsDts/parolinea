@@ -5,6 +5,7 @@
     Check,
     ChevronDown,
     Clock3,
+    Compass,
     Download,
     Edit3,
     Grid3X3,
@@ -22,7 +23,7 @@
   import ManualBoardEditor from './ManualBoardEditor.svelte';
   import Modal from './Modal.svelte';
 
-  type TileMenu = 'grid' | 'min' | 'time' | 'quantity';
+  type TileMenu = 'grid' | 'min' | 'time' | 'letters' | 'quantity';
   type TileOption<T extends string | number> = {
     label: string;
     value: T;
@@ -32,6 +33,8 @@
     gameTime: number;
     minWordLength: number;
     wordQuantityMode: WordQuantityMode;
+    discoveryMode: boolean;
+    discoveryTargetPercent: number;
     manualMode: boolean;
     manualBoard: string[][];
   };
@@ -63,11 +66,14 @@
     { label: 'Medio', value: 'medium' },
     { label: 'Alto', value: 'high' },
   ];
+  const discoveryTargetOptions = [50, 60, 70, 90, 100];
 
   let gridSize = 5;
   let gameTime = 0;
   let minWordLength = 5;
   let wordQuantityMode: WordQuantityMode = 'random';
+  let discoveryMode = false;
+  let discoveryTargetPercent = 70;
   let manualMode = false;
   let manualBoard = createEmptyBoard(gridSize);
   let manualEditorOpen = false;
@@ -79,6 +85,7 @@
   let disabledInfoOpen = false;
   let disabledInfoTitle = '';
   let disabledInfoMessage = '';
+  let discoveryInfoOpen = false;
 
   $: if (manualBoard.length !== gridSize || manualBoard[0]?.length !== gridSize) {
     manualBoard = createEmptyBoard(gridSize);
@@ -124,6 +131,10 @@
     return wordQuantityOptions.some((option) => option.value === value);
   }
 
+  function isDiscoveryTargetPercent(value: unknown): value is number {
+    return typeof value === 'number' && discoveryTargetOptions.includes(value);
+  }
+
   function isManualBoard(value: unknown, expectedGridSize: number): value is string[][] {
     return (
       Array.isArray(value) &&
@@ -162,6 +173,14 @@
         wordQuantityMode = settings.wordQuantityMode;
       }
 
+      if (typeof settings.discoveryMode === 'boolean') {
+        discoveryMode = settings.discoveryMode;
+      }
+
+      if (isDiscoveryTargetPercent(settings.discoveryTargetPercent)) {
+        discoveryTargetPercent = settings.discoveryTargetPercent;
+      }
+
       if (typeof settings.manualMode === 'boolean') {
         manualMode = settings.manualMode;
       }
@@ -184,6 +203,8 @@
       gameTime,
       minWordLength,
       wordQuantityMode,
+      discoveryMode,
+      discoveryTargetPercent,
       manualMode,
       manualBoard: normalizeManualBoard(manualBoard),
     };
@@ -220,8 +241,32 @@
     closeMenu();
   }
 
-  function toggleManualMode() {
-    manualMode = !manualMode;
+  function selectLettersMode(value: boolean) {
+    manualMode = value;
+    saveHomeSettings();
+    closeMenu();
+  }
+
+  function toggleDiscoveryMode() {
+    discoveryMode = !discoveryMode;
+    if (discoveryMode && openMenu === 'time') openMenu = null;
+    saveHomeSettings();
+  }
+
+  function openTimeSettings() {
+    saveHomeSettings();
+
+    if (discoveryMode) {
+      openMenu = null;
+      discoveryInfoOpen = true;
+      return;
+    }
+
+    toggleMenu('time');
+  }
+
+  function selectDiscoveryTargetPercent(value: number) {
+    discoveryTargetPercent = value;
     saveHomeSettings();
   }
 
@@ -237,6 +282,7 @@
 
   function openManualEditor() {
     saveHomeSettings();
+    openMenu = null;
 
     if (!manualMode) {
       showDisabledInfo(
@@ -287,12 +333,15 @@
       }
     }
 
+    const effectiveGameTime = discoveryMode ? 0 : gameTime;
     const config = manualMode
-      ? createManualGameConfig(gridSize, minWordLength, gameTime, manualBoard)
-      : generateGameConfig(gridSize, minWordLength, gameTime);
+      ? createManualGameConfig(gridSize, minWordLength, effectiveGameTime, manualBoard)
+      : generateGameConfig(gridSize, minWordLength, effectiveGameTime);
 
     onStart(config, {
       wordQuantityMode: manualMode ? 'random' : wordQuantityMode,
+      discoveryMode,
+      discoveryTargetPercent,
     });
   }
 
@@ -375,17 +424,21 @@
       class:open={openMenu === 'time'}
       class="board-tile choice-tile"
       type="button"
-      aria-haspopup="listbox"
+      aria-haspopup={discoveryMode ? undefined : 'listbox'}
       aria-expanded={openMenu === 'time'}
-      on:click={() => toggleMenu('time')}
+      on:click={openTimeSettings}
     >
       <Clock3 size={22} />
       <span>Tempo</span>
-      <strong>{timeOptions.find((option) => option.value === gameTime)?.label}</strong>
-      <span class="tile-chevron"><ChevronDown size={16} /></span>
+      <strong>{discoveryMode ? 'Crono' : timeOptions.find((option) => option.value === gameTime)?.label}</strong>
+      {#if discoveryMode}
+        <small>{discoveryTargetPercent}% punti</small>
+      {:else}
+        <span class="tile-chevron"><ChevronDown size={16} /></span>
+      {/if}
     </button>
 
-    {#if openMenu === 'time'}
+    {#if openMenu === 'time' && !discoveryMode}
       <div class="tile-menu" role="listbox" aria-label="Durata partita">
         {#each timeOptions as option}
           <button class:selected={option.value === gameTime} type="button" role="option" aria-selected={option.value === gameTime} on:click={() => selectGameTime(option.value)}>
@@ -397,25 +450,48 @@
     {/if}
   </div>
 
-  <button class="board-tile mode-tile" type="button" on:click={toggleManualMode}>
-    <svg class="letters-mode-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="4.25" y="4.25" width="15.5" height="15.5" />
-      <path d="M9.45 9.35a2.75 2.75 0 0 1 5.1 1.45c0 1.8-2.55 2.1-2.55 3.55" />
-      <circle cx="12" cy="17" r="0.55" fill="currentColor" stroke="none" />
-    </svg>
-    <span>Lettere</span>
-    <strong>{manualMode ? 'Manuale' : 'Random'}</strong>
-  </button>
+  <div class="tile-menu-wrap">
+    <button
+      class:open={openMenu === 'letters'}
+      class="board-tile choice-tile mode-tile"
+      type="button"
+      aria-haspopup="listbox"
+      aria-expanded={openMenu === 'letters'}
+      on:click={() => toggleMenu('letters')}
+    >
+      <svg class="letters-mode-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="4.25" y="4.25" width="15.5" height="15.5" />
+        <path d="M9.45 9.35a2.75 2.75 0 0 1 5.1 1.45c0 1.8-2.55 2.1-2.55 3.55" />
+        <circle cx="12" cy="17" r="0.55" fill="currentColor" stroke="none" />
+      </svg>
+      <span>Lettere</span>
+      <strong>{manualMode ? 'Manuale' : 'Random'}</strong>
+      <span class="tile-chevron"><ChevronDown size={16} /></span>
+    </button>
 
-  <button
-    class="board-tile action-tile"
-    class:soft-disabled={!manualMode}
-    type="button"
-    aria-disabled={!manualMode}
-    on:click={openManualEditor}
-  >
-    <Edit3 size={23} />
-    <span>Configura</span>
+    {#if openMenu === 'letters'}
+      <div class="tile-menu" role="listbox" aria-label="Modalita lettere">
+        <button class:selected={!manualMode} type="button" role="option" aria-selected={!manualMode} on:click={() => selectLettersMode(false)}>
+          <span>Random</span>
+          {#if !manualMode}<Check size={15} />{/if}
+        </button>
+        <button class:selected={manualMode} type="button" role="option" aria-selected={manualMode} on:click={() => selectLettersMode(true)}>
+          <span>Manuale</span>
+          {#if manualMode}<Check size={15} />{/if}
+        </button>
+        <button class="menu-action" type="button" disabled={!manualMode} on:click={openManualEditor}>
+          <span>Configura</span>
+          <Edit3 size={15} />
+        </button>
+      </div>
+    {/if}
+  </div>
+
+  <button class="board-tile mode-tile discovery-tile" class:active={discoveryMode} type="button" on:click={toggleDiscoveryMode}>
+    <Compass size={23} />
+    <span>Modalità</span>
+    <strong>{discoveryMode ? 'Scoperta' : 'Classica'}</strong>
+    <small>{discoveryMode ? 'prefissi' : ''}</small>
   </button>
 
   <div class="tile-menu-wrap">
@@ -480,6 +556,32 @@
   <div class="disabled-info">
     <p>{disabledInfoMessage}</p>
     <button class="button primary" type="button" on:click={() => (disabledInfoOpen = false)}>Ok</button>
+  </div>
+</Modal>
+
+<Modal open={discoveryInfoOpen} title="Tempo in Scoperta" onClose={() => (discoveryInfoOpen = false)}>
+  <div class="discovery-info">
+    <p>
+      In modalità Scoperta non c'è un conto alla rovescia: devi raggiungere la soglia scelta dei punti disponibili
+      nello schema nel minor tempo possibile. La partita finisce appena raggiungi l'obiettivo e il risultato
+      è il tempo impiegato.
+    </p>
+    <div class="threshold-field" role="group" aria-label="Soglia obiettivo">
+      <span>Soglia</span>
+      <div class="threshold-options">
+        {#each discoveryTargetOptions as option}
+          <button
+            class:selected={option === discoveryTargetPercent}
+            type="button"
+            aria-pressed={option === discoveryTargetPercent}
+            on:click={() => selectDiscoveryTargetPercent(option)}
+          >
+            {option}%
+          </button>
+        {/each}
+      </div>
+    </div>
+    <button class="button primary" type="button" on:click={() => (discoveryInfoOpen = false)}>Ok</button>
   </div>
 </Modal>
 
@@ -670,8 +772,26 @@
     background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   }
 
+  .tile-menu button.menu-action {
+    color: var(--ink);
+  }
+
+  .tile-menu button:disabled {
+    cursor: not-allowed;
+    color: color-mix(in srgb, var(--muted) 62%, var(--surface));
+  }
+
+  .tile-menu button:disabled:hover,
+  .tile-menu button:disabled:focus-visible {
+    background: transparent;
+  }
+
   .mode-tile {
     background: color-mix(in srgb, var(--selected) 4%, var(--tile));
+  }
+
+  .discovery-tile.active {
+    background: color-mix(in srgb, var(--accent) 12%, var(--tile));
   }
 
   .quantity-tile {
@@ -689,6 +809,59 @@
     color: var(--muted);
     font-size: 0.95rem;
     line-height: 1.45;
+  }
+
+  .discovery-info {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .discovery-info p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .discovery-info > .button {
+    justify-self: end;
+  }
+
+  .threshold-field {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .threshold-field > span {
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .threshold-options {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--tile-border);
+    padding: 1px;
+  }
+
+  .threshold-options button {
+    min-width: 0;
+    min-height: 2.5rem;
+    border: 0;
+    border-radius: 0;
+    background: var(--tile);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 850;
+    cursor: pointer;
+  }
+
+  .threshold-options button.selected {
+    background: var(--accent);
+    color: white;
   }
 
   @keyframes blur-enter {

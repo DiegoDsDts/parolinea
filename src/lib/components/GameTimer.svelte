@@ -3,12 +3,15 @@
   import { formatDuration } from '../services/gameConfig';
 
   export let seconds = 0;
+  export let countUp = false;
   export let active = false;
   export let paused = false;
   export let resetKey = 0;
   export let onEnd: () => void = () => {};
+  export let onTick: (elapsedSeconds: number) => void = () => {};
 
   let remaining = seconds;
+  let elapsed = 0;
   let previousResetKey = resetKey;
   let endSent = false;
   let intervalId: number | null = null;
@@ -20,34 +23,47 @@
     }
   }
 
+  function formatElapsed(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  }
+
   $: if (resetKey !== previousResetKey) {
     previousResetKey = resetKey;
     remaining = seconds;
+    elapsed = 0;
     endSent = false;
+    onTick(0);
   }
 
   $: {
     clearTimer();
-    if (active && !paused && seconds > 0 && remaining > 0) {
+    if (active && !paused && countUp) {
+      intervalId = window.setInterval(() => {
+        elapsed += 1;
+        onTick(elapsed);
+      }, 1000);
+    } else if (active && !paused && seconds > 0 && remaining > 0) {
       intervalId = window.setInterval(() => {
         remaining = Math.max(0, remaining - 1);
       }, 1000);
     }
   }
 
-  $: if (active && seconds > 0 && remaining === 0 && !endSent) {
+  $: if (!countUp && active && seconds > 0 && remaining === 0 && !endSent) {
     endSent = true;
     clearTimer();
     onEnd();
   }
 
-  $: urgent = active && !paused && seconds > 0 && remaining > 0 && remaining <= 10;
+  $: urgent = !countUp && active && !paused && seconds > 0 && remaining > 0 && remaining <= 10;
 
   onDestroy(clearTimer);
 </script>
 
-<span class="timer" class:paused class:urgent aria-label="Tempo rimasto">
-  {seconds === 0 ? '∞' : formatDuration(remaining)}
+<span class="timer" class:paused class:urgent aria-label={countUp ? 'Tempo trascorso' : 'Tempo rimasto'}>
+  {countUp ? formatElapsed(elapsed) : seconds === 0 ? '∞' : formatDuration(remaining)}
 </span>
 
 <style>

@@ -7,6 +7,8 @@ export type WordQuantityMode = 'random' | 'low' | 'medium' | 'high';
 
 export interface StartGameOptions {
   wordQuantityMode?: WordQuantityMode;
+  discoveryMode?: boolean;
+  discoveryTargetPercent?: number;
 }
 
 export interface GameConfig {
@@ -39,6 +41,12 @@ export interface WordItem {
   score: number;
   found?: boolean;
   displayScore?: string;
+}
+
+export interface SolveBoardResult {
+  words: WordItem[];
+  pathPrefixes: string[];
+  pathPrefixWords: Array<[string, string[]]>;
 }
 
 export interface DictionaryStatus {

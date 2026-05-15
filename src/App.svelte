@@ -30,6 +30,7 @@
     FeedbackType,
     GameConfig,
     GameMode,
+    SolveBoardResult,
     StartGameOptions,
     ThemePreference,
     WordItem,
@@ -53,6 +54,8 @@
   let foundWords = new Set<string>();
   let foundWordsList: WordItem[] = [];
   let allSolutionsList: WordItem[] = [];
+  let solutionPathPrefixes = new Set<string>();
+  let solutionPathWords = new Map<string, Set<string>>();
   let gameActive = false;
   let isPaused = false;
   let calculationProgress = 0;
@@ -60,6 +63,8 @@
   let generationAttempt = 0;
   let generationTargetRange: SolutionScoreRange | null = null;
   let timerResetKey = 0;
+  let elapsedSeconds = 0;
+  let finalElapsedSeconds = 0;
   let feedbackTimeout: number | null = null;
   let submissionVersion = 0;
   let lastSubmittedWordIndices: number[] | null = null;
@@ -78,6 +83,8 @@
   let homeStartSignal = 0;
   let generationVersion = 0;
   let lastGameOptions: StartGameOptions = {};
+  let discoveryMode = false;
+  let discoveryTargetPercent = 70;
   let finishedSolutionsRevealQueued = false;
   let ignoreFinishedSolutionsClick = false;
   let suppressDefinitionUntil = 0;
@@ -101,7 +108,10 @@
       displayScore: found ? `+${item.score}` : String(item.score),
     };
   });
+  $: discoveryPathFeedback = getDiscoveryPathFeedback(selectedIndices);
   $: scorePercent = totalPossibleScore > 0 ? Math.round((totalScore / totalPossibleScore) * 100) : 0;
+  $: discoveryScorePercent = totalPossibleScore > 0 ? Math.floor((totalScore / totalPossibleScore) * 100) : 0;
+  $: discoveryTargetScore = totalPossibleScore > 0 ? Math.ceil(totalPossibleScore * (discoveryTargetPercent / 100)) : 0;
   $: activeChallengeFrom = gameConfig ? getChallengeFrom(gameConfig) : null;
   $: pendingChallengeFrom = pendingChallengeConfig ? getChallengeFrom(pendingChallengeConfig) : null;
   $: recapGridSize = gameConfig ? parseGridSize(gameConfig['grid-size']) : 4;
@@ -191,6 +201,10 @@
     foundWords = new Set();
     foundWordsList = [];
     allSolutionsList = [];
+    solutionPathPrefixes = new Set();
+    solutionPathWords = new Map();
+    elapsedSeconds = 0;
+    finalElapsedSeconds = 0;
     lastSubmittedWordIndices = null;
     gameActive = false;
     isPaused = false;
@@ -214,6 +228,34 @@
 
   function getSolutionScore(words: WordItem[]): number {
     return words.reduce((sum, item) => sum + item.score, 0);
+  }
+
+  function formatRaceDuration(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  }
+
+  function serializeIndexPath(indices: number[], length = indices.length): string {
+    return indices.slice(0, length).join(',');
+  }
+
+  function createPathWordsMap(entries: Array<[string, string[]]>): Map<string, Set<string>> {
+    return new Map(entries.map(([pathPrefix, words]) => [pathPrefix, new Set(words)]));
+  }
+
+  function getDiscoveryPathFeedback(indices: number[]): 'dead' | 'exhausted' | null {
+    if (!discoveryMode || !gameActive || feedbackType || indices.length === 0) return null;
+
+    const pathPrefix = serializeIndexPath(indices);
+    if (!solutionPathPrefixes.has(pathPrefix)) return 'dead';
+
+    const reachableWords = solutionPathWords.get(pathPrefix);
+    if (reachableWords && reachableWords.size > 0 && Array.from(reachableWords).every((word) => foundWords.has(word))) {
+      return 'exhausted';
+    }
+
+    return null;
   }
 
   function isScoreInRange(score: number, range: SolutionScoreRange | null): boolean {
@@ -247,6 +289,8 @@
     dictionaryClient.cancelSolve();
     resetRoundState();
     lastGameOptions = { ...options };
+    discoveryMode = options.discoveryMode ?? false;
+    discoveryTargetPercent = options.discoveryTargetPercent ?? 70;
     const currentGenerationVersion = generationVersion + 1;
     generationVersion = currentGenerationVersion;
     gameMode = 'loading';
@@ -258,7 +302,9 @@
       const maxAttempts = generationTargetRange ? TARGETED_BOARD_ATTEMPT_LIMIT : RANDOM_BOARD_ATTEMPT_LIMIT;
       let selectedConfig = config;
       let selectedSolutions: WordItem[] = [];
-      let bestCandidate: { config: GameConfig; solutions: WordItem[]; distance: number } | null = null;
+      let selectedPathPrefixes: string[] = [];
+      let selectedPathPrefixWords: Array<[string, string[]]> = [];
+      let bestCandidate: { config: GameConfig; result: SolveBoardResult; distance: number } | null = null;
 
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         generationAttempt = attempt;
@@ -270,7 +316,7 @@
             ? config
             : generateGameConfig(gridSize, config['min-word-length'], config['duration-sec']);
         const candidateBoardLetters = getBoardLetters(candidateConfig);
-        const solutions = await dictionaryClient.solveBoard(
+        const result = await dictionaryClient.solveBoard(
           candidateBoardLetters.flat(),
           gridSize,
           candidateConfig['min-word-length'],
@@ -282,14 +328,16 @@
 
         if (generationVersion !== currentGenerationVersion) return;
 
-        if (solutions.length === 0) {
+        if (result.words.length === 0) {
           continue;
         }
 
-        const possibleScore = getSolutionScore(solutions);
+        const possibleScore = getSolutionScore(result.words);
         if (isScoreInRange(possibleScore, generationTargetRange)) {
           selectedConfig = candidateConfig;
-          selectedSolutions = solutions;
+          selectedSolutions = result.words;
+          selectedPathPrefixes = result.pathPrefixes;
+          selectedPathPrefixWords = result.pathPrefixWords;
           bestCandidate = null;
           break;
         }
@@ -297,14 +345,16 @@
         if (generationTargetRange) {
           const distance = getScoreDistanceFromRange(possibleScore, generationTargetRange);
           if (!bestCandidate || distance < bestCandidate.distance) {
-            bestCandidate = { config: candidateConfig, solutions, distance };
+            bestCandidate = { config: candidateConfig, result, distance };
           }
         }
       }
 
       if (bestCandidate) {
         selectedConfig = bestCandidate.config;
-        selectedSolutions = bestCandidate.solutions;
+        selectedSolutions = bestCandidate.result.words;
+        selectedPathPrefixes = bestCandidate.result.pathPrefixes;
+        selectedPathPrefixWords = bestCandidate.result.pathPrefixWords;
         showToast('Range non trovato: avvio lo schema piu vicino.');
       }
 
@@ -315,6 +365,8 @@
       gameConfig = selectedConfig;
       boardCells = createBoardCells(getBoardLetters(selectedConfig));
       allSolutionsList = selectedSolutions;
+      solutionPathPrefixes = new Set(selectedPathPrefixes);
+      solutionPathWords = createPathWordsMap(selectedPathPrefixWords);
       gameMode = 'play';
       gameActive = true;
       isPaused = false;
@@ -407,6 +459,7 @@
 
   function finishGame() {
     clearFeedbackTimer();
+    finalElapsedSeconds = elapsedSeconds;
     selectedIndices = [];
     currentWord = '';
     feedbackType = null;
@@ -480,6 +533,12 @@
   function handleDiceRelease() {
     if (!gameConfig || !gameActive || isPaused) return;
 
+    if (discoveryPathFeedback === 'dead' || discoveryPathFeedback === 'exhausted') {
+      selectedIndices = [];
+      currentWord = '';
+      return;
+    }
+
     if (currentWord.length >= gameConfig['min-word-length']) {
       submitCurrentWord();
       return;
@@ -532,6 +591,11 @@
           foundWords = nextFoundWords;
           foundWordsList = nextFoundWordsList;
           feedbackType = 'word-valid';
+
+          if (discoveryMode && discoveryTargetScore > 0 && getSolutionScore(nextFoundWordsList) >= discoveryTargetScore) {
+            finishGame();
+            return;
+          }
 
           if (allSolutionsList.length > 0 && nextFoundWordsList.length >= allSolutionsList.length) {
             clearFeedbackTimer();
@@ -650,7 +714,7 @@
   function restartSameBoard() {
     if (!gameConfig) return;
     const nextGameOptions = { ...lastGameOptions };
-    startNewGame(gameConfig, { wordQuantityMode: 'random' });
+    startNewGame(gameConfig, { ...nextGameOptions, wordQuantityMode: 'random' });
     lastGameOptions = nextGameOptions;
   }
 
@@ -701,17 +765,24 @@
           </div>
           <div class="board-meta">
             <strong class="score-summary">
-              <span class="score-points">{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'}</span>
-              <span class="score-percent">{allSolutionsList.length > 0 ? scorePercent : '?'}%</span>
+              {#if discoveryMode}
+                <span class="score-points">{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'}</span>
+                <span class="score-percent">{allSolutionsList.length > 0 ? `${discoveryScorePercent} - ${discoveryTargetPercent}%` : '?'}</span>
+              {:else}
+                <span class="score-points">{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'}</span>
+                <span class="score-percent">{allSolutionsList.length > 0 ? scorePercent : '?'}%</span>
+              {/if}
             </strong>
             {#if activeChallengeFrom}
               <span class="challenge-target">{activeChallengeFrom.name}: {activeChallengeFrom.points.toLocaleString('it-IT')} pt</span>
             {/if}
             <GameTimer
               seconds={gameConfig['duration-sec']}
+              countUp={discoveryMode}
               active={gameActive}
               paused={isPaused}
               resetKey={timerResetKey}
+              onTick={(seconds) => (elapsedSeconds = seconds)}
               onEnd={() => endGame(false)}
             />
           </div>
@@ -729,8 +800,13 @@
           </div>
           <div class="board-meta">
             <strong class="score-summary">
-              <span class="score-points">{totalScore} / {totalPossibleScore}</span>
-              <span class="score-percent">{scorePercent}%</span>
+              {#if discoveryMode}
+                <span class="score-points">{formatRaceDuration(finalElapsedSeconds)}</span>
+                <span class="score-percent">{totalScore} / {totalPossibleScore}</span>
+              {:else}
+                <span class="score-points">{totalScore} / {totalPossibleScore}</span>
+                <span class="score-percent">{scorePercent}%</span>
+              {/if}
             </strong>
           </div>
         {:else if activeTab === 'game' && gameMode === 'recap'}
@@ -739,8 +815,13 @@
           </div>
           <div class="board-meta">
             <strong class="score-summary">
-              <span class="score-points">{totalScore} / {totalPossibleScore}</span>
-              <span class="score-percent">{scorePercent}%</span>
+              {#if discoveryMode}
+                <span class="score-points">{formatRaceDuration(finalElapsedSeconds)}</span>
+                <span class="score-percent">{totalScore} / {totalPossibleScore}</span>
+              {:else}
+                <span class="score-points">{totalScore} / {totalPossibleScore}</span>
+                <span class="score-percent">{scorePercent}%</span>
+              {/if}
             </strong>
           </div>
         {:else if activeTab === 'info'}
@@ -801,6 +882,7 @@
                 {boardCells}
                 {selectedIndices}
                 {feedbackType}
+                {discoveryPathFeedback}
                 gridSize={parseGridSize(gameConfig['grid-size'])}
                 {isPaused}
                 onDiceSelectStart={handleDicePress}
@@ -849,8 +931,14 @@
             on:click={showFinishedSolutions}
           >
             <span class="finished-kicker">Partita finita</span>
-            <strong>Vedi soluzioni</strong>
-            <span class="finished-detail">{foundWordsList.length} parole trovate su {allSolutionsList.length}</span>
+            <strong>{discoveryMode ? `Tempo ${formatRaceDuration(finalElapsedSeconds)}` : 'Vedi soluzioni'}</strong>
+            <span class="finished-detail">
+              {#if discoveryMode}
+                Obiettivo raggiunto: {totalScore} / {totalPossibleScore} pt
+              {:else}
+                {foundWordsList.length} parole trovate su {allSolutionsList.length}
+              {/if}
+            </span>
             <span class="finished-icon" aria-hidden="true">
               <ArrowRightToLine strokeWidth={1.8} />
             </span>

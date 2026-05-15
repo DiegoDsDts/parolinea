@@ -5,6 +5,7 @@
   export let boardCells: BoardCell[][] = [];
   export let selectedIndices: number[] = [];
   export let feedbackType: FeedbackType = null;
+  export let discoveryPathFeedback: 'dead' | 'exhausted' | null = null;
   export let gridSize = 4;
   export let isPaused = false;
   export let disabled = false;
@@ -201,6 +202,8 @@
       <div
         animate:flip={{ duration: 600 }}
         class:selected
+        class:discovery-dead={selected && discoveryPathFeedback === 'dead' && !feedbackType}
+        class:discovery-exhausted={selected && discoveryPathFeedback === 'exhausted' && !feedbackType}
         class:valid={selected && feedbackType === 'word-valid'}
         class:duplicate={selected && feedbackType === 'word-duplicate'}
         class:invalid={selected && feedbackType === 'word-invalid'}
@@ -290,6 +293,14 @@
 
   .tile-bg.selected {
     --tile-bg: var(--selected);
+  }
+
+  .tile-bg.discovery-dead {
+    --tile-bg: #5b0c08;
+  }
+
+  .tile-bg.discovery-exhausted {
+    --tile-bg: #8b6100;
   }
 
   .tile-bg.valid {

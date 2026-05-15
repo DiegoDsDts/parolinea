@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import type { DictionaryStatus, SolveProgress, WordItem } from '../types';
+import type { DictionaryStatus, SolveBoardResult, SolveProgress } from '../types';
 
 type WorkerMessage =
   | { type: 'dictionary-progress'; wordsLoaded: number }
@@ -8,7 +8,7 @@ type WorkerMessage =
   | { type: 'check-result'; requestId: number; exists: boolean }
   | { type: 'check-error'; requestId: number; error: string }
   | { type: 'solve-progress'; requestId: number; progress: number; wordsFound: number }
-  | { type: 'solve-result'; requestId: number; words: WordItem[] }
+  | { type: 'solve-result'; requestId: number; result: SolveBoardResult }
   | { type: 'solve-error'; requestId: number; error: string }
   | { type: 'solve-cancelled'; requestId: number };
 
@@ -32,7 +32,7 @@ class DictionaryClient {
   private solves = new Map<
     number,
     {
-      resolve: (words: WordItem[]) => void;
+      resolve: (result: SolveBoardResult) => void;
       reject: (error: Error) => void;
       onProgress?: (progress: SolveProgress) => void;
     }
@@ -75,7 +75,7 @@ class DictionaryClient {
     gridSize: number,
     minWordLength: number,
     onProgress?: (progress: SolveProgress) => void,
-  ): Promise<WordItem[]> {
+  ): Promise<SolveBoardResult> {
     await this.ensureReady();
     const requestId = this.nextRequestId;
     this.nextRequestId += 1;
@@ -192,7 +192,7 @@ class DictionaryClient {
 
     if (message.type === 'solve-result') {
       const pending = this.solves.get(message.requestId);
-      pending?.resolve(message.words);
+      pending?.resolve(message.result);
       this.solves.delete(message.requestId);
       return;
     }
