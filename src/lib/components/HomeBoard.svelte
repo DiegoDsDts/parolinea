@@ -66,7 +66,7 @@
     { label: 'Medio', value: 'medium' },
     { label: 'Alto', value: 'high' },
   ];
-  const discoveryTargetOptions = [50, 60, 70, 90, 100];
+  const discoveryTargetOptions = [20, 30, 40, 50, 60, 70, 90, 100];
 
   let gridSize = 5;
   let gameTime = 0;
@@ -86,6 +86,7 @@
   let disabledInfoTitle = '';
   let disabledInfoMessage = '';
   let discoveryInfoOpen = false;
+  let modeSettingsOpen = false;
 
   $: if (manualBoard.length !== gridSize || manualBoard[0]?.length !== gridSize) {
     manualBoard = createEmptyBoard(gridSize);
@@ -247,8 +248,14 @@
     closeMenu();
   }
 
-  function toggleDiscoveryMode() {
-    discoveryMode = !discoveryMode;
+  function openModeSettings() {
+    saveHomeSettings();
+    openMenu = null;
+    modeSettingsOpen = true;
+  }
+
+  function selectMode(mode: 'classic' | 'discovery') {
+    discoveryMode = mode === 'discovery';
     if (discoveryMode && openMenu === 'time') openMenu = null;
     saveHomeSettings();
   }
@@ -487,11 +494,11 @@
     {/if}
   </div>
 
-  <button class="board-tile mode-tile discovery-tile" class:active={discoveryMode} type="button" on:click={toggleDiscoveryMode}>
+  <button class="board-tile mode-tile discovery-tile" class:active={discoveryMode} type="button" on:click={openModeSettings}>
     <Compass size={23} />
     <span>Modalità</span>
     <strong>{discoveryMode ? 'Scoperta' : 'Classica'}</strong>
-    <small>{discoveryMode ? 'prefissi' : ''}</small>
+    <small>{discoveryMode ? `${discoveryTargetPercent}%` : ''}</small>
   </button>
 
   <div class="tile-menu-wrap">
@@ -560,28 +567,85 @@
 </Modal>
 
 <Modal open={discoveryInfoOpen} title="Tempo in Scoperta" onClose={() => (discoveryInfoOpen = false)}>
-  <div class="discovery-info">
+  <div class="disabled-info">
     <p>
       In modalità Scoperta non c'è un conto alla rovescia: devi raggiungere la soglia scelta dei punti disponibili
       nello schema nel minor tempo possibile. La partita finisce appena raggiungi l'obiettivo e il risultato
-      è il tempo impiegato.
+      è il tempo impiegato. La soglia si imposta dal quadratino Modalità.
     </p>
-    <div class="threshold-field" role="group" aria-label="Soglia obiettivo">
-      <span>Soglia</span>
-      <div class="threshold-options">
-        {#each discoveryTargetOptions as option}
-          <button
-            class:selected={option === discoveryTargetPercent}
-            type="button"
-            aria-pressed={option === discoveryTargetPercent}
-            on:click={() => selectDiscoveryTargetPercent(option)}
-          >
-            {option}%
-          </button>
-        {/each}
-      </div>
-    </div>
     <button class="button primary" type="button" on:click={() => (discoveryInfoOpen = false)}>Ok</button>
+  </div>
+</Modal>
+
+<Modal open={modeSettingsOpen} title="Modalità" wide onClose={() => (modeSettingsOpen = false)}>
+  <div class="mode-config">
+    <div class="mode-list" role="listbox" aria-label="Modalità partita">
+      <button
+        class:selected={!discoveryMode}
+        type="button"
+        role="option"
+        aria-selected={!discoveryMode}
+        on:click={() => selectMode('classic')}
+      >
+        <strong>Classica</strong>
+        <span>Punteggio libero</span>
+      </button>
+      <button
+        class:selected={discoveryMode}
+        type="button"
+        role="option"
+        aria-selected={discoveryMode}
+        on:click={() => selectMode('discovery')}
+      >
+        <strong>Scoperta</strong>
+        <span>Obiettivo a tempo</span>
+      </button>
+    </div>
+
+    <section class="mode-detail" aria-live="polite">
+      {#if discoveryMode}
+        <div>
+          <h3>Scoperta</h3>
+          <p>
+            Devi raggiungere una soglia dei punti disponibili nello schema nel minor tempo possibile.
+            Il timer sale, non scade: la partita finisce appena arrivi alla soglia scelta.
+          </p>
+          <p>
+            Durante la selezione, i quadratini mostrano se il percorso è morto, già esaurito, o se
+            compone una parola valida pronta da inserire.
+          </p>
+        </div>
+
+        <div class="threshold-field" role="group" aria-label="Soglia obiettivo">
+          <span>Soglia obiettivo</span>
+          <div class="threshold-options">
+            {#each discoveryTargetOptions as option}
+              <button
+                class:selected={option === discoveryTargetPercent}
+                type="button"
+                aria-pressed={option === discoveryTargetPercent}
+                on:click={() => selectDiscoveryTargetPercent(option)}
+              >
+                {option}%
+              </button>
+            {/each}
+          </div>
+        </div>
+      {:else}
+        <div>
+          <h3>Classica</h3>
+          <p>
+            Trova più parole possibili nello schema. Se imposti una durata, la partita finisce allo scadere
+            del tempo; con durata illimitata puoi terminare quando vuoi.
+          </p>
+          <p>
+            Il punteggio è la somma dei punti delle parole trovate rispetto al totale delle soluzioni.
+          </p>
+        </div>
+      {/if}
+
+      <button class="button primary" type="button" on:click={() => (modeSettingsOpen = false)}>Ok</button>
+    </section>
   </div>
 </Modal>
 
@@ -803,19 +867,82 @@
     line-height: 1.45;
   }
 
-  .discovery-info {
+  .mode-config {
+    height: min(32rem, 66vh);
+    min-height: 22rem;
     display: grid;
+    grid-template-columns: minmax(11rem, 0.34fr) minmax(0, 1fr);
     gap: 1rem;
+    overflow: hidden;
   }
 
-  .discovery-info p {
-    margin: 0;
+  .mode-list {
+    min-width: 0;
+    display: grid;
+    align-content: start;
+    gap: 1px;
+    padding: 1px;
+    background: var(--tile-border);
+  }
+
+  .mode-list button {
+    min-width: 0;
+    display: grid;
+    gap: 0.28rem;
+    padding: 0.8rem;
+    border: 0;
+    border-radius: 0;
+    background: var(--tile);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .mode-list button.selected {
+    background: color-mix(in srgb, var(--accent) 14%, var(--tile));
+  }
+
+  .mode-list strong {
+    font-size: 0.98rem;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  .mode-list span {
     color: var(--muted);
-    font-size: 0.95rem;
+    font-size: 0.78rem;
+    font-weight: 760;
+    line-height: 1.2;
+  }
+
+  .mode-detail {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    display: grid;
+    align-content: start;
+    gap: 1rem;
+    padding-right: 0.15rem;
+  }
+
+  .mode-detail h3,
+  .mode-detail p {
+    margin: 0;
+  }
+
+  .mode-detail h3 {
+    font-size: 1.12rem;
+    line-height: 1.15;
+  }
+
+  .mode-detail p {
+    color: var(--muted);
+    font-size: 0.94rem;
     line-height: 1.45;
   }
 
-  .discovery-info > .button {
+  .mode-detail > .button {
     justify-self: end;
   }
 
@@ -832,15 +959,16 @@
   }
 
   .threshold-options {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 1px;
     background: var(--tile-border);
     padding: 1px;
   }
 
   .threshold-options button {
-    min-width: 0;
+    flex: 1 1 calc(25% - 1px);
+    min-width: 4.2rem;
     min-height: 2.5rem;
     border: 0;
     border-radius: 0;
@@ -871,6 +999,21 @@
   @media (max-width: 560px) {
     .tile-menu button {
       min-height: 2.65rem;
+    }
+
+    .mode-config {
+      height: min(34rem, 72vh);
+      grid-template-columns: 1fr;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .mode-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .threshold-options button {
+      flex-basis: calc(33.333% - 1px);
+      min-width: 3.8rem;
     }
   }
 </style>
