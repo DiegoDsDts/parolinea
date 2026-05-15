@@ -786,14 +786,6 @@
     background: transparent;
   }
 
-  .mode-tile {
-    background: color-mix(in srgb, var(--selected) 4%, var(--tile));
-  }
-
-  .discovery-tile.active {
-    background: color-mix(in srgb, var(--accent) 12%, var(--tile));
-  }
-
   .quantity-tile {
     gap: 0.24rem;
   }
