@@ -200,7 +200,7 @@
     {#each cells as cell, index (cell.id)}
       {@const selected = selectedSet.has(index)}
       <div
-        animate:flip={{ duration: 600 }}
+        animate:flip={{ duration: 850 }}
         class:selected
         class:discovery-dead={selected && discoveryPathFeedback === 'dead' && !feedbackType}
         class:discovery-exhausted={selected && discoveryPathFeedback === 'exhausted' && !feedbackType}
@@ -217,7 +217,7 @@
     {#each cells as cell, index (cell.id)}
       {@const selected = selectedSet.has(index)}
       <button
-        animate:flip={{ duration: 600 }}
+        animate:flip={{ duration: 850 }}
         class:selected
         class="tile"
         type="button"
