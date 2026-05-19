@@ -60,8 +60,7 @@
       finisce e puoi vedere tutte le soluzioni disponibili.
     </p>
     <p>
-      Le parole più lunghe valgono più punti. A parità di schema, vince chi trova più parole e ottiene
-      il punteggio migliore.
+      Le parole più lunghe valgono più punti. In caso di sfida sullo stesso schema, vince chi fa più punti.
     </p>
   </div>
 </Modal>
