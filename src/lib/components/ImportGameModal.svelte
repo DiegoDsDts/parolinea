@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ClipboardPaste, Play } from 'lucide-svelte';
   import type { GameConfig } from '../types';
-  import { normalizeGameConfig, validateGameConfig } from '../services/gameConfig';
+  import { decodeChallengeToken, extractChallengeToken } from '../services/gameConfig';
   import Modal from './Modal.svelte';
 
   export let open = false;
@@ -30,27 +30,26 @@
     error = '';
 
     try {
-      const parsed = JSON.parse(configText.trim()) as GameConfig;
-      const validation = validateGameConfig(parsed);
-      if (!validation.valid) {
-        error = validation.error ?? 'Configurazione non valida.';
+      const token = extractChallengeToken(configText);
+      if (!token) {
+        error = 'Incolla un link sfida o un token valido.';
         return;
       }
 
-      onImport(normalizeGameConfig(parsed));
+      onImport(decodeChallengeToken(token));
       close();
-    } catch {
-      error = 'JSON non valido.';
+    } catch (importError) {
+      error = importError instanceof Error ? importError.message : 'Link sfida non valido.';
     }
   }
 </script>
 
-<Modal {open} title="Importa partita" wide onClose={close}>
+<Modal {open} title="Importa sfida" wide onClose={close}>
   <div class="importer">
-    <label for="config-json">Configurazione JSON</label>
+    <label for="challenge-link">Link sfida o token</label>
     <div class="textarea-shell">
       <textarea
-        id="config-json"
+        id="challenge-link"
         bind:value={configText}
         rows="9"
         spellcheck="false"

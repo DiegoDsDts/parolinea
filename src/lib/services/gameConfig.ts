@@ -1,5 +1,10 @@
-import type { GameChallengeFrom, GameConfig, WordQuantityMode } from '../types';
+import type { GameChallengeFrom, GameConfig, WordItem, WordQuantityMode } from '../types';
 import { createRandomBoard } from './letters';
+
+const CHALLENGE_FORMAT_VERSION = '1';
+const CHALLENGE_FIELD_SEPARATOR = '|';
+const COMPACT_QU_CELL = '~';
+const BASE_36_RADIX = 36;
 
 export interface SolutionScoreRange {
   min: number;
@@ -141,6 +146,184 @@ export function parseChallengeWords(words: string | undefined): string[] {
 
 export function normalizeChallengeWords(words: string): string {
   return parseChallengeWords(words).join(',');
+}
+
+function encodeBase36(value: number): string {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error('Numero sfida non valido.');
+  }
+
+  return value.toString(BASE_36_RADIX);
+}
+
+function decodeBase36(value: string, fieldName: string): number {
+  if (!/^[0-9a-z]+$/i.test(value)) {
+    throw new Error(`${fieldName} non valido.`);
+  }
+
+  const decoded = Number.parseInt(value, BASE_36_RADIX);
+  if (!Number.isInteger(decoded) || decoded < 0) {
+    throw new Error(`${fieldName} non valido.`);
+  }
+
+  return decoded;
+}
+
+function encodeUtf8Base64Url(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function decodeUtf8Base64Url(value: string): string {
+  if (!/^[A-Za-z0-9_-]+={0,2}$/.test(value)) {
+    throw new Error('Token sfida non valido.');
+  }
+
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+function boardToCompactLetters(config: GameConfig): string {
+  return getBoardLetters(config)
+    .flat()
+    .map((cell) => (cell === 'QU' ? COMPACT_QU_CELL : cell.toLowerCase()))
+    .join('');
+}
+
+function compactLettersToBoard(compactLetters: string, gridSize: number): string[][] {
+  const cells: string[] = [];
+
+  for (const char of compactLetters) {
+    if (char === COMPACT_QU_CELL) {
+      cells.push('QU');
+      continue;
+    }
+
+    if (/^[a-z]$/i.test(char)) {
+      cells.push(char.toUpperCase());
+      continue;
+    }
+
+    throw new Error('Griglia sfida non valida.');
+  }
+
+  if (cells.length !== gridSize * gridSize) {
+    throw new Error('Griglia sfida non valida.');
+  }
+
+  return Array.from({ length: gridSize }, (_, rowIndex) =>
+    cells.slice(rowIndex * gridSize, rowIndex * gridSize + gridSize),
+  );
+}
+
+function serializeFoundWords(words: WordItem[]): string {
+  return words
+    .slice()
+    .reverse()
+    .map((item) => item.word.trim().toLowerCase())
+    .filter(Boolean)
+    .join(',');
+}
+
+export function encodeChallengeConfig(
+  config: GameConfig,
+  playerName: string,
+  points: number,
+  foundWords: WordItem[],
+): string {
+  const normalizedConfig = normalizeGameConfig(config);
+  const gridSize = parseGridSize(normalizedConfig['grid-size']);
+  const minWordLength = normalizedConfig['min-word-length'];
+  const compactGridAndMin = `${encodeBase36(gridSize)}${encodeBase36(minWordLength)}`;
+  const fields = [
+    CHALLENGE_FORMAT_VERSION,
+    compactGridAndMin,
+    encodeBase36(normalizedConfig['duration-sec']),
+    boardToCompactLetters(normalizedConfig),
+    encodeBase36(points),
+    encodeURIComponent(playerName.trim() || 'Giocatore'),
+    serializeFoundWords(foundWords),
+  ];
+
+  return encodeUtf8Base64Url(fields.join(CHALLENGE_FIELD_SEPARATOR));
+}
+
+export function decodeChallengeToken(token: string): GameConfig {
+  let decodedPayload: string;
+  try {
+    decodedPayload = decodeUtf8Base64Url(token.trim());
+  } catch {
+    throw new Error('Link sfida non valido.');
+  }
+
+  const fields = decodedPayload.split(CHALLENGE_FIELD_SEPARATOR);
+  if (fields.length !== 7 || fields[0] !== CHALLENGE_FORMAT_VERSION || fields[1].length !== 2) {
+    throw new Error('Formato sfida non supportato.');
+  }
+
+  const gridSize = decodeBase36(fields[1][0], 'Dimensione griglia');
+  const minWordLength = decodeBase36(fields[1][1], 'Lunghezza minima');
+  const durationSeconds = decodeBase36(fields[2], 'Durata');
+  const points = decodeBase36(fields[4], 'Punti');
+  let name: string;
+  try {
+    name = decodeURIComponent(fields[5]).trim() || 'Giocatore';
+  } catch {
+    throw new Error('Nome sfidante non valido.');
+  }
+
+  const decodedConfig: GameConfig = {
+    'grid-size': `${gridSize}x${gridSize}`,
+    'min-word-length': minWordLength,
+    'duration-sec': durationSeconds,
+    letters: boardToGridLetters(compactLettersToBoard(fields[3], gridSize)),
+    from: {
+      played: true,
+      name,
+      points,
+      words: normalizeChallengeWords(fields[6]),
+    },
+  };
+  const validation = validateGameConfig(decodedConfig);
+  if (!validation.valid) {
+    throw new Error(validation.error ?? 'Link sfida non valido.');
+  }
+
+  return normalizeGameConfig(decodedConfig);
+}
+
+export function createChallengeUrl(token: string): string {
+  const challengeUrl = new URL(import.meta.env.BASE_URL, window.location.origin);
+  challengeUrl.searchParams.set('g', token);
+  return challengeUrl.toString();
+}
+
+export function extractChallengeToken(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('?')) {
+    return new URLSearchParams(trimmed).get('g')?.trim() || null;
+  }
+
+  if (/^(https?:\/\/|\/)/i.test(trimmed)) {
+    try {
+      const parsedUrl = new URL(trimmed, window.location.origin);
+      return parsedUrl.searchParams.get('g')?.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  return trimmed;
 }
 
 export function getChallengeFrom(config: GameConfig): GameChallengeFrom | null {

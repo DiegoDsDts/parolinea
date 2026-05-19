@@ -23,6 +23,6 @@ npm run preview
 - durata illimitata o a tempo
 - lunghezza minima delle parole configurabile
 - generazione casuale pesata sulle lettere italiane
-- griglia manuale e import partita in JSON
+- griglia manuale e import sfida tramite link compatto
 - riepilogo con parole trovate, soluzioni totali e punteggio
 - tema chiaro, scuro o di sistema

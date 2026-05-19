@@ -14,11 +14,14 @@
   import WordList from './lib/components/WordList.svelte';
   import { dictionaryClient, dictionaryStatus } from './lib/services/dictionaryClient';
   import {
+    createChallengeUrl,
+    decodeChallengeToken,
+    encodeChallengeConfig,
+    extractChallengeToken,
     generateGameConfig,
     getBoardLetters,
     getChallengeFrom,
     getSolutionScoreRange,
-    normalizeGameConfig,
     parseChallengeWords,
     parseGridSize,
     type SolutionScoreRange,
@@ -153,7 +156,8 @@
       : $dictionaryStatus.wordsLoaded > 0
         ? `${$dictionaryStatus.wordsLoaded.toLocaleString('it-IT')} parole caricate`
         : 'Caricamento dizionario italiano';
-  $: exportJson = gameConfig ? JSON.stringify(createSharedGameConfig(gameConfig, totalScore, displayPlayerName, foundWordsList), null, 2) : '';
+  $: challengeToken = gameConfig ? encodeChallengeConfig(gameConfig, displayPlayerName, totalScore, foundWordsList) : '';
+  $: challengeLink = challengeToken ? createChallengeUrl(challengeToken) : '';
 
   function syncBrowserThemeChrome(theme: EffectiveTheme) {
     const themeColor = theme === 'dark' ? '#191b18' : '#f7f5ef';
@@ -175,6 +179,8 @@
     };
 
     mediaQuery.addEventListener('change', updateSystemTheme);
+    openChallengeFromCurrentUrl();
+
     dictionaryClient.ensureReady().catch((error) => {
       showToast(error instanceof Error ? error.message : 'Errore durante il caricamento del dizionario.');
     });
@@ -290,28 +296,6 @@
     calculationWordsFound = 0;
     generationAttempt = 0;
     generationTargetRange = null;
-  }
-
-  function serializeFoundWords(words: WordItem[]): string {
-    return words
-      .slice()
-      .reverse()
-      .map((item) => item.word.trim().toLowerCase())
-      .filter(Boolean)
-      .join(',');
-  }
-
-  function createSharedGameConfig(config: GameConfig, points: number, name: string, words: WordItem[]): GameConfig {
-    const normalizedConfig = normalizeGameConfig(config);
-    return {
-      ...normalizedConfig,
-      from: {
-        played: true,
-        name: name || 'Giocatore',
-        points,
-        words: serializeFoundWords(words),
-      },
-    };
   }
 
   function getSolutionScore(words: WordItem[]): number {
@@ -531,11 +515,22 @@
     boardCells = rotateMatrixClockwise(boardCells);
   }
 
-  async function copyExportJson() {
-    if (!exportJson) return;
+  function openChallengeFromCurrentUrl() {
+    const token = extractChallengeToken(window.location.search);
+    if (!token) return;
 
     try {
-      await navigator.clipboard.writeText(exportJson);
+      requestStartGame(decodeChallengeToken(token));
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Link sfida non valido.');
+    }
+  }
+
+  async function copyChallengeLink() {
+    if (!challengeLink) return;
+
+    try {
+      await navigator.clipboard.writeText(challengeLink);
       exportCopied = true;
       window.setTimeout(() => {
         exportCopied = false;
@@ -1167,12 +1162,13 @@
 
 <Modal open={exportOpen} title="Condividi partita" wide onClose={() => (exportOpen = false)}>
   <div class="export-game">
-    <textarea readonly rows="12" spellcheck="false" value={exportJson}></textarea>
+    <label for="challenge-link">Link sfida</label>
+    <textarea id="challenge-link" readonly rows="4" spellcheck="false" value={challengeLink}></textarea>
     <div class="modal-actions">
       <button class="button secondary" type="button" on:click={() => (exportOpen = false)}>Chiudi</button>
-      <button class="button primary" type="button" on:click={copyExportJson}>
+      <button class="button primary" type="button" on:click={copyChallengeLink}>
         <Clipboard size={18} />
-        {exportCopied ? 'Copiato' : 'Copia JSON'}
+        {exportCopied ? 'Copiato' : 'Copia link'}
       </button>
     </div>
   </div>
