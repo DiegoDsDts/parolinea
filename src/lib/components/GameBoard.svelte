@@ -2,8 +2,12 @@
   import { flip } from 'svelte/animate';
   import type { BoardCell, FeedbackType } from '../types';
 
+  type TileFadeType = FeedbackType | 'neutral' | 'discovery-dead' | 'discovery-exhausted' | 'discovery-valid';
+
   export let boardCells: BoardCell[][] = [];
   export let selectedIndices: number[] = [];
+  export let fadingIndices: number[] = [];
+  export let fadingType: TileFadeType = null;
   export let feedbackType: FeedbackType = null;
   export let discoveryPathFeedback: 'dead' | 'exhausted' | 'valid' | null = null;
   export let gridSize = 4;
@@ -27,6 +31,7 @@
   let tileFont = '1rem';
 
   $: selectedSet = new Set(selectedIndices);
+  $: fadingSet = new Set(fadingIndices);
   $: cells = boardCells.flat();
 
   function measureTileFont(node: HTMLElement, _layoutKey: string) {
@@ -213,6 +218,27 @@
     {/each}
   </div>
 
+  <div class="tile-layer tile-fades" aria-hidden="true">
+    {#each cells as cell, index (cell.id)}
+      {@const fading = fadingSet.has(index)}
+      <div
+        class:visible={fading}
+        class:neutral={fading && fadingType === 'neutral'}
+        class:valid={fading && fadingType === 'word-valid'}
+        class:duplicate={fading && fadingType === 'word-duplicate'}
+        class:invalid={fading && fadingType === 'word-invalid'}
+        class:discovery-dead={fading && fadingType === 'discovery-dead'}
+        class:discovery-exhausted={fading && fadingType === 'discovery-exhausted'}
+        class:discovery-valid={fading && fadingType === 'discovery-valid'}
+        class="tile-fade"
+      >
+        {#if fading}
+          <span class="tile-fade-letter">{cell.letter}</span>
+        {/if}
+      </div>
+    {/each}
+  </div>
+
   <div class="tile-layer tile-controls">
     {#each cells as cell, index (cell.id)}
       {@const selected = selectedSet.has(index)}
@@ -259,8 +285,14 @@
     z-index: 2;
   }
 
+  .tile-fades {
+    z-index: 3;
+    pointer-events: none;
+  }
+
   .tile-bg,
-  .tile {
+  .tile,
+  .tile-fade {
     width: 100%;
     min-width: 0;
     aspect-ratio: 1;
@@ -271,6 +303,53 @@
   .tile-bg {
     --tile-bg: var(--tile);
     background: var(--tile-bg);
+  }
+
+  .tile-fade {
+    display: grid;
+    place-items: center;
+    background: transparent;
+    opacity: 0;
+    font-size: var(--tile-font);
+    font-weight: 850;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .tile-fade.visible {
+    animation: tile-selection-fade 170ms ease-out forwards;
+  }
+
+  .tile-fade.neutral {
+    background: var(--selected);
+  }
+
+  .tile-fade.valid {
+    background: var(--success);
+  }
+
+  .tile-fade.duplicate {
+    background: var(--warning);
+  }
+
+  .tile-fade.invalid {
+    background: var(--danger);
+  }
+
+  .tile-fade.discovery-dead {
+    background: #5b0c08;
+  }
+
+  .tile-fade.discovery-exhausted {
+    background: #8b6100;
+  }
+
+  .tile-fade.discovery-valid {
+    background: #0f5a2e;
+  }
+
+  .tile-fade-letter {
+    color: white;
   }
 
   .tile {
@@ -348,6 +427,16 @@
 
   .board.disabled .tile-controls {
     pointer-events: none;
+  }
+
+  @keyframes tile-selection-fade {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
   }
 
   @media (max-width: 520px) {

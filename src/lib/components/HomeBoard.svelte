@@ -438,10 +438,8 @@
       <Clock3 size={22} />
       <span>Tempo</span>
       <strong>{discoveryMode ? 'Crono' : timeOptions.find((option) => option.value === gameTime)?.label}</strong>
-      {#if discoveryMode}
-        <small>{discoveryTargetPercent}% punti</small>
-      {:else}
-        <span class="tile-chevron"><ChevronDown size={16} /></span>
+      {#if !discoveryMode}
+         <span class="tile-chevron"><ChevronDown size={16} /></span>
       {/if}
     </button>
 
@@ -602,48 +600,49 @@
       </button>
     </div>
 
-    <section class="mode-detail" aria-live="polite">
-      {#if discoveryMode}
-        <div>
-          <h3>Scoperta</h3>
-          <p>
-            Devi raggiungere una soglia dei punti disponibili nello schema nel minor tempo possibile.
-            Il timer sale, non scade: la partita finisce appena arrivi alla soglia scelta.
-          </p>
-          <p>
-            Durante la selezione, i quadratini mostrano se il percorso è morto, già esaurito, o se
-            compone una parola valida pronta da inserire.
-          </p>
-        </div>
-
-        <div class="threshold-field" role="group" aria-label="Soglia obiettivo">
-          <span>Soglia obiettivo</span>
-          <div class="threshold-options">
-            {#each discoveryTargetOptions as option}
-              <button
-                class:selected={option === discoveryTargetPercent}
-                type="button"
-                aria-pressed={option === discoveryTargetPercent}
-                on:click={() => selectDiscoveryTargetPercent(option)}
-              >
-                {option}%
-              </button>
-            {/each}
+    <section class="mode-detail">
+      <div class="mode-detail-scroll" aria-live="polite">
+        {#if discoveryMode}
+          <div>
+            <h3>Scoperta</h3>
+            <p>
+              Devi raggiungere una soglia dei punti disponibili nello schema nel minor tempo possibile.
+              Il timer sale, non scade: la partita finisce appena arrivi alla soglia scelta.
+            </p>
+            <p>
+              Durante la selezione, i quadratini mostrano se il percorso è morto, già esaurito, o se
+              compone una parola valida pronta da inserire.
+            </p>
           </div>
-        </div>
-      {:else}
-        <div>
-          <h3>Classica</h3>
-          <p>
-            Trova più parole possibili nello schema. Se imposti una durata, la partita finisce allo scadere
-            del tempo; con durata illimitata puoi terminare quando vuoi.
-          </p>
-          <p>
-            Il punteggio è la somma dei punti delle parole trovate rispetto al totale delle soluzioni.
-          </p>
-        </div>
-      {/if}
 
+          <div class="threshold-field" role="group" aria-label="Soglia obiettivo">
+            <span>Soglia obiettivo</span>
+            <div class="threshold-options">
+              {#each discoveryTargetOptions as option}
+                <button
+                  class:selected={option === discoveryTargetPercent}
+                  type="button"
+                  aria-pressed={option === discoveryTargetPercent}
+                  on:click={() => selectDiscoveryTargetPercent(option)}
+                >
+                  {option}%
+                </button>
+              {/each}
+            </div>
+          </div>
+        {:else}
+          <div>
+            <h3>Classica</h3>
+            <p>
+              Trova più parole possibili nello schema. Se imposti una durata, la partita finisce allo scadere
+              del tempo; con durata illimitata puoi terminare quando vuoi.
+            </p>
+            <p>
+              Il punteggio è la somma dei punti delle parole trovate rispetto al totale delle soluzioni.
+            </p>
+          </div>
+        {/if}
+      </div>
       <button class="button primary" type="button" on:click={() => (modeSettingsOpen = false)}>Ok</button>
     </section>
   </div>
@@ -900,7 +899,12 @@
   }
 
   .mode-list button.selected {
-    background: color-mix(in srgb, var(--accent) 14%, var(--tile));
+    background: var(--accent);
+    color: white;
+  }
+
+  .mode-list button.selected span {
+    color: color-mix(in srgb, white 82%, var(--surface-muted));
   }
 
   .mode-list strong {
@@ -919,10 +923,18 @@
   .mode-detail {
     min-width: 0;
     min-height: 0;
-    overflow: auto;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 1rem;
+    overflow: hidden;
+  }
+
+  .mode-detail-scroll {
+    min-height: 0;
     display: grid;
     align-content: start;
     gap: 1rem;
+    overflow: auto;
     padding-right: 0.15rem;
   }
 
@@ -959,16 +971,15 @@
   }
 
   .threshold-options {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1px;
     background: var(--tile-border);
     padding: 1px;
   }
 
   .threshold-options button {
-    flex: 1 1 calc(25% - 1px);
-    min-width: 4.2rem;
+    min-width: 0;
     min-height: 2.5rem;
     border: 0;
     border-radius: 0;
@@ -1012,8 +1023,11 @@
     }
 
     .threshold-options button {
-      flex-basis: calc(33.333% - 1px);
-      min-width: 3.8rem;
+      min-width: 0;
+    }
+
+    .threshold-options {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 </style>

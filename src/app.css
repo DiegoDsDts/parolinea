@@ -266,6 +266,7 @@ a:focus-visible {
 .board-stage {
   width: var(--board-size);
   min-width: 0;
+  position: relative;
   display: grid;
   grid-template-rows: var(--board-info-height) var(--board-size);
   gap: 0.45rem;
@@ -291,7 +292,7 @@ a:focus-visible {
   justify-items: start;
   align-content: end;
   gap: 0.22rem;
-  overflow: hidden;
+  overflow: visible;
   padding-bottom: 0.08rem;
   text-align: left;
 }
@@ -314,9 +315,76 @@ a:focus-visible {
 
 .current-title {
   min-height: 1em;
+  position: relative;
   overflow-wrap: anywhere;
   text-transform: uppercase;
   color: #565656;
+}
+
+.board-title .current-word-badge {
+  min-width: 0;
+  max-width: 100%;
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.board-title .current-word-badge.reward-active {
+  animation: current-word-reward 720ms cubic-bezier(0.17, 0.92, 0.24, 1) forwards;
+}
+
+.board-title .current-word-badge.word-fade-out {
+  animation: current-word-fade-out 170ms ease-out forwards;
+}
+
+.board-title .current-word-badge.reward-active::before {
+  content: "";
+  position: absolute;
+  inset: -0.13em -0.32em -0.11em;
+  z-index: -1;
+  border: 1px solid color-mix(in srgb, var(--success) 50%, white);
+  background: color-mix(in srgb, var(--surface) 72%, var(--success));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--success) 18%, transparent),
+    0 0.45rem 1.2rem color-mix(in srgb, var(--success) 18%, transparent);
+}
+
+.board-title .current-word-badge.valid,
+.board-title .current-word-badge.reward-active .current-word-text {
+  color: var(--success);
+}
+
+.board-title .current-word-badge.duplicate {
+  color: var(--warning);
+}
+
+.board-title .current-word-badge.invalid {
+  color: var(--danger);
+}
+
+.board-title .current-word-text {
+  min-width: 0;
+  max-width: 100%;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-title .current-word-points {
+  flex: 0 0 auto;
+  color: var(--success);
+  font-size: 0.78em;
+  font-weight: inherit;
+  line-height: inherit;
 }
 
 .current-title:empty::before {
@@ -383,6 +451,10 @@ a:focus-visible {
   font-size: 0.92em;
 }
 
+.board-meta .score-summary.reward-pulse {
+  animation: score-reward-pulse 620ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
 .board-meta span,
 .board-meta .timer {
   color: var(--muted);
@@ -441,6 +513,24 @@ a:focus-visible {
   height: 100%;
 }
 
+.play-board-slot {
+  position: relative;
+}
+
+.play-board-slot.reward-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border: 1px solid color-mix(in srgb, var(--success) 72%, white);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--success) 28%, transparent),
+    0 0 0.72rem color-mix(in srgb, var(--success) 52%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: board-reward-glow 640ms ease-out forwards;
+}
+
 .play-board-slot .board {
   width: 100%;
 }
@@ -467,6 +557,71 @@ a:focus-visible {
   font-weight: 850;
   line-height: 1;
   text-transform: uppercase;
+}
+
+@keyframes current-word-reward {
+  0% {
+    opacity: 0;
+    transform: translateY(0.25rem) scale(0.98);
+  }
+
+  22% {
+    opacity: 1;
+    transform: translateY(-0.03rem) scale(1.015);
+  }
+
+  58% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-0.32rem) scale(0.995);
+  }
+}
+
+@keyframes current-word-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-0.18rem);
+  }
+}
+
+@keyframes score-reward-pulse {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    color: var(--ink);
+  }
+
+  32% {
+    transform: translateY(-0.08rem) scale(1.09);
+    color: var(--success);
+    text-shadow: 0 0 0.9rem color-mix(in srgb, var(--success) 36%, transparent);
+  }
+}
+
+@keyframes board-reward-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.992);
+  }
+
+  22% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.01);
+  }
 }
 
 .state-board {
@@ -561,6 +716,12 @@ a:focus-visible {
   min-height: 0;
   margin-inline: auto;
   overflow: hidden;
+}
+
+.play-context {
+  height: 100%;
+  min-height: 0;
+  position: relative;
 }
 
 .context-panel .word-list {

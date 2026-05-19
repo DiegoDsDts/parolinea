@@ -36,6 +36,9 @@
     WordItem,
   } from './lib/types';
 
+  type FadeWordType = FeedbackType | 'neutral';
+  type TileFadeType = FeedbackType | 'neutral' | 'discovery-dead' | 'discovery-exhausted' | 'discovery-valid';
+
   const THEME_STORAGE_KEY = 'parolinea/theme-preference';
   const PLAYER_NAME_STORAGE_KEY = 'parolinea/player-name';
   const TARGETED_BOARD_ATTEMPT_LIMIT = 240;
@@ -49,7 +52,10 @@
   let boardCells: BoardCell[][] = [];
   let board: string[][] = [];
   let selectedIndices: number[] = [];
+  let fadingIndices: number[] = [];
+  let fadingTileType: TileFadeType = null;
   let currentWord = '';
+  let fadingWord: { id: number; word: string; type: FadeWordType } | null = null;
   let feedbackType: FeedbackType = null;
   let foundWords = new Set<string>();
   let foundWordsList: WordItem[] = [];
@@ -66,12 +72,17 @@
   let elapsedSeconds = 0;
   let finalElapsedSeconds = 0;
   let feedbackTimeout: number | null = null;
+  let fadeTimeout: number | null = null;
+  let fadeId = 0;
+  let rewardTimeout: number | null = null;
+  let rewardId = 0;
   let submissionVersion = 0;
   let lastSubmittedWordIndices: number[] | null = null;
   let selectedDefinitionWord = '';
   let definitionOpen = false;
   let exportOpen = false;
   let exportCopied = false;
+  let wordReward: { id: number; word: string; score: number } | null = null;
   let toastMessage = '';
   let confirmOpen = false;
   let confirmTitle = '';
@@ -157,6 +168,8 @@
     return () => {
       mediaQuery.removeEventListener('change', updateSystemTheme);
       clearFeedbackTimer();
+      clearSelectionFade();
+      clearRewardTimer();
       dictionaryClient.cancelSolve();
     };
   });
@@ -192,12 +205,62 @@
     }
   }
 
+  function clearRewardTimer() {
+    if (rewardTimeout !== null) {
+      window.clearTimeout(rewardTimeout);
+      rewardTimeout = null;
+    }
+  }
+
+  function clearSelectionFade() {
+    if (fadeTimeout !== null) {
+      window.clearTimeout(fadeTimeout);
+      fadeTimeout = null;
+    }
+
+    fadingIndices = [];
+    fadingTileType = null;
+    fadingWord = null;
+  }
+
+  function showSelectionFade(indices: number[], word: string, tileType: TileFadeType, wordType: FadeWordType = 'neutral') {
+    clearSelectionFade();
+    if (indices.length === 0 && !word) return;
+
+    fadeId += 1;
+    fadingIndices = [...indices];
+    fadingTileType = tileType;
+    fadingWord = word ? { id: fadeId, word, type: wordType } : null;
+    fadeTimeout = window.setTimeout(() => {
+      fadingIndices = [];
+      fadingTileType = null;
+      fadingWord = null;
+      fadeTimeout = null;
+    }, 190);
+  }
+
+  function showWordReward(word: string, score: number) {
+    clearRewardTimer();
+    rewardId += 1;
+    wordReward = { id: rewardId, word, score };
+    rewardTimeout = window.setTimeout(() => {
+      wordReward = null;
+      rewardTimeout = null;
+    }, 1150);
+  }
+
   function resetRoundState() {
     clearFeedbackTimer();
+    clearRewardTimer();
+    clearSelectionFade();
     submissionVersion += 1;
     selectedIndices = [];
+    fadingIndices = [];
+    fadingTileType = null;
     currentWord = '';
+    fadingWord = null;
     feedbackType = null;
+    wordReward = null;
     foundWords = new Set();
     foundWordsList = [];
     allSolutionsList = [];
@@ -508,6 +571,7 @@
   function handleDicePress(index: number) {
     if (!gameActive || isPaused) return;
     clearFeedbackTimer();
+    clearSelectionFade();
     submissionVersion += 1;
     feedbackType = null;
     selectedIndices = [index];
@@ -538,6 +602,8 @@
     if (!gameConfig || !gameActive || isPaused) return;
 
     if (discoveryPathFeedback === 'dead' || discoveryPathFeedback === 'exhausted') {
+      const tileType: TileFadeType = discoveryPathFeedback === 'dead' ? 'discovery-dead' : 'discovery-exhausted';
+      showSelectionFade(selectedIndices, currentWord, tileType, 'neutral');
       selectedIndices = [];
       currentWord = '';
       return;
@@ -548,6 +614,7 @@
       return;
     }
 
+    showSelectionFade(selectedIndices, currentWord, 'neutral', 'neutral');
     selectedIndices = [];
     currentWord = '';
   }
@@ -595,6 +662,7 @@
           foundWords = nextFoundWords;
           foundWordsList = nextFoundWordsList;
           feedbackType = 'word-valid';
+          showWordReward(submittedWord, score);
 
           if (discoveryMode && discoveryTargetScore > 0 && getSolutionScore(nextFoundWordsList) >= discoveryTargetScore) {
             finishGame();
@@ -616,6 +684,8 @@
 
       clearFeedbackTimer();
       feedbackTimeout = window.setTimeout(() => {
+        const tileType = feedbackType ?? 'neutral';
+        showSelectionFade(selectedIndices, currentWord, tileType, feedbackType ?? 'neutral');
         feedbackType = null;
         selectedIndices = [];
         currentWord = '';
@@ -765,10 +835,24 @@
             class:invalid={feedbackType === 'word-invalid'}
             class="board-title current-title"
           >
-            {currentWord || ''}
+            {#key wordReward?.id ?? fadingWord?.id ?? 0}
+              <span
+                class:reward-active={!!wordReward}
+                class:word-fade-out={!wordReward && !currentWord && !!fadingWord}
+                class:valid={!wordReward && fadingWord?.type === 'word-valid'}
+                class:duplicate={!wordReward && fadingWord?.type === 'word-duplicate'}
+                class:invalid={!wordReward && fadingWord?.type === 'word-invalid'}
+                class="current-word-badge"
+              >
+                <span class="current-word-text">{wordReward?.word ?? (currentWord || fadingWord?.word || '')}</span>
+                {#if wordReward}
+                  <span class="current-word-points">+{wordReward.score}</span>
+                {/if}
+              </span>
+            {/key}
           </div>
           <div class="board-meta">
-            <strong class="score-summary">
+            <strong class="score-summary" class:reward-pulse={!!wordReward}>
               {#if discoveryMode}
                 <span class="score-points">{totalScore} / {allSolutionsList.length > 0 ? totalPossibleScore : '?'}</span>
                 <span class="score-percent">{allSolutionsList.length > 0 ? `${discoveryScorePercent} - ${discoveryTargetPercent}%` : '?'}</span>
@@ -881,10 +965,12 @@
               </button>
             </section>
           {:else if gameMode === 'play' && gameConfig}
-            <div class="play-board-slot">
+            <div class="play-board-slot" class:reward-glow={!!wordReward}>
               <GameBoard
                 {boardCells}
                 {selectedIndices}
+                {fadingIndices}
+                fadingType={fadingTileType}
                 {feedbackType}
                 {discoveryPathFeedback}
                 gridSize={parseGridSize(gameConfig['grid-size'])}
@@ -920,12 +1006,14 @@
 
     <section class="context-panel" aria-label="Area contestuale">
       {#if activeTab === 'game' && gameMode === 'play'}
-        <WordList
-          title="Parole trovate"
-          words={foundWordsList}
-          emptyText="Nessuna parola trovata"
-          onWordSelect={openDefinition}
-        />
+        <div class="play-context">
+          <WordList
+            title="Parole trovate"
+            words={foundWordsList}
+            emptyText="Nessuna parola trovata"
+            onWordSelect={openDefinition}
+          />
+        </div>
       {:else if activeTab === 'game' && gameMode === 'finished'}
         <section class="finished-panel" aria-label="Partita finita">
           <button
