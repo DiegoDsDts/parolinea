@@ -69,7 +69,7 @@
   const discoveryTargetOptions = [20, 30, 40, 50, 60, 70, 90, 100];
 
   let gridSize = 5;
-  let gameTime = 0;
+  let gameTime = 180;
   let minWordLength = 5;
   let wordQuantityMode: WordQuantityMode = 'random';
   let discoveryMode = false;
