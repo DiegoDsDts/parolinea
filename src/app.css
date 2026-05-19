@@ -517,11 +517,25 @@ a:focus-visible {
   position: relative;
 }
 
-.play-board-slot.reward-glow::after {
+.play-board-slot.time-warning-glow::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 3;
+  border: 1px solid color-mix(in srgb, var(--warning) 78%, white);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--warning) 34%, transparent),
+    0 0 0.82rem color-mix(in srgb, var(--warning) 58%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: board-time-warning-glow 520ms ease-in-out infinite alternate;
+}
+
+.play-board-slot.reward-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
   border: 1px solid color-mix(in srgb, var(--success) 72%, white);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--success) 28%, transparent),
@@ -621,6 +635,18 @@ a:focus-visible {
   100% {
     opacity: 0;
     transform: scale(1.01);
+  }
+}
+
+@keyframes board-time-warning-glow {
+  from {
+    opacity: 0.18;
+    transform: scale(0.998);
+  }
+
+  to {
+    opacity: 0.92;
+    transform: scale(1.002);
   }
 }
 

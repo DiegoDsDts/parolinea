@@ -23,12 +23,14 @@ export interface GameChallengeFrom {
   played: true;
   name: string;
   points: number;
+  words?: string;
 }
 
 export interface GameConfigFrom {
   played?: boolean;
   name?: string;
   points?: number;
+  words?: string;
 }
 
 export interface BoardCell {
@@ -40,6 +42,7 @@ export interface WordItem {
   word: string;
   score: number;
   found?: boolean;
+  opponentFound?: boolean;
   displayScore?: string;
 }
 

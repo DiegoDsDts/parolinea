@@ -19,6 +19,7 @@
     getChallengeFrom,
     getSolutionScoreRange,
     normalizeGameConfig,
+    parseChallengeWords,
     parseGridSize,
     type SolutionScoreRange,
   } from './lib/services/gameConfig';
@@ -70,6 +71,7 @@
   let generationTargetRange: SolutionScoreRange | null = null;
   let timerResetKey = 0;
   let elapsedSeconds = 0;
+  let remainingSeconds = 0;
   let finalElapsedSeconds = 0;
   let feedbackTimeout: number | null = null;
   let fadeTimeout: number | null = null;
@@ -111,11 +113,16 @@
   $: totalScore = foundWordsList.reduce((sum, item) => sum + item.score, 0);
   $: totalPossibleScore = allSolutionsList.reduce((sum, item) => sum + item.score, 0);
   $: recapFoundWords = new Set(foundWordsList.map((item) => item.word));
+  $: activeChallengeFrom = gameConfig ? getChallengeFrom(gameConfig) : null;
+  $: challengeHasWordList = activeChallengeFrom?.words !== undefined;
+  $: opponentFoundWords = new Set(parseChallengeWords(activeChallengeFrom?.words));
   $: solutionItems = allSolutionsList.map((item) => {
     const found = recapFoundWords.has(item.word);
+    const opponentFound = opponentFoundWords.has(item.word);
     return {
       ...item,
       found,
+      opponentFound,
       displayScore: found ? `+${item.score}` : String(item.score),
     };
   });
@@ -123,7 +130,14 @@
   $: scorePercent = totalPossibleScore > 0 ? Math.round((totalScore / totalPossibleScore) * 100) : 0;
   $: discoveryScorePercent = totalPossibleScore > 0 ? Math.floor((totalScore / totalPossibleScore) * 100) : 0;
   $: discoveryTargetScore = totalPossibleScore > 0 ? Math.ceil(totalPossibleScore * (discoveryTargetPercent / 100)) : 0;
-  $: activeChallengeFrom = gameConfig ? getChallengeFrom(gameConfig) : null;
+  $: timeWarningGlow =
+    !!gameConfig &&
+    !discoveryMode &&
+    gameActive &&
+    !isPaused &&
+    gameConfig['duration-sec'] > 0 &&
+    remainingSeconds > 0 &&
+    remainingSeconds <= 10;
   $: pendingChallengeFrom = pendingChallengeConfig ? getChallengeFrom(pendingChallengeConfig) : null;
   $: recapGridSize = gameConfig ? parseGridSize(gameConfig['grid-size']) : 4;
   $: staticTileFont = `calc(var(--board-size) * ${0.5 / recapGridSize})`;
@@ -139,7 +153,7 @@
       : $dictionaryStatus.wordsLoaded > 0
         ? `${$dictionaryStatus.wordsLoaded.toLocaleString('it-IT')} parole caricate`
         : 'Caricamento dizionario italiano';
-  $: exportJson = gameConfig ? JSON.stringify(createSharedGameConfig(gameConfig, totalScore, displayPlayerName), null, 2) : '';
+  $: exportJson = gameConfig ? JSON.stringify(createSharedGameConfig(gameConfig, totalScore, displayPlayerName, foundWordsList), null, 2) : '';
 
   function syncBrowserThemeChrome(theme: EffectiveTheme) {
     const themeColor = theme === 'dark' ? '#191b18' : '#f7f5ef';
@@ -267,6 +281,7 @@
     solutionPathPrefixes = new Set();
     solutionPathWords = new Map();
     elapsedSeconds = 0;
+    remainingSeconds = 0;
     finalElapsedSeconds = 0;
     lastSubmittedWordIndices = null;
     gameActive = false;
@@ -277,7 +292,16 @@
     generationTargetRange = null;
   }
 
-  function createSharedGameConfig(config: GameConfig, points: number, name: string): GameConfig {
+  function serializeFoundWords(words: WordItem[]): string {
+    return words
+      .slice()
+      .reverse()
+      .map((item) => item.word.trim().toLowerCase())
+      .filter(Boolean)
+      .join(',');
+  }
+
+  function createSharedGameConfig(config: GameConfig, points: number, name: string, words: WordItem[]): GameConfig {
     const normalizedConfig = normalizeGameConfig(config);
     return {
       ...normalizedConfig,
@@ -285,6 +309,7 @@
         played: true,
         name: name || 'Giocatore',
         points,
+        words: serializeFoundWords(words),
       },
     };
   }
@@ -437,6 +462,7 @@
       gameMode = 'play';
       gameActive = true;
       isPaused = false;
+      remainingSeconds = discoveryMode ? 0 : selectedConfig['duration-sec'];
       timerResetKey += 1;
     } catch (error) {
       if (error instanceof Error && error.message === 'Calcolo annullato.') return;
@@ -871,6 +897,7 @@
               paused={isPaused}
               resetKey={timerResetKey}
               onTick={(seconds) => (elapsedSeconds = seconds)}
+              onRemainingTick={(seconds) => (remainingSeconds = seconds)}
               onEnd={() => endGame(false)}
             />
           </div>
@@ -911,6 +938,9 @@
                 <span class="score-percent">{scorePercent}%</span>
               {/if}
             </strong>
+            {#if activeChallengeFrom}
+              <span class="challenge-target">{activeChallengeFrom.name}: {activeChallengeFrom.points.toLocaleString('it-IT')} pt</span>
+            {/if}
           </div>
         {:else if activeTab === 'info'}
           <div class="board-title">
@@ -965,7 +995,7 @@
               </button>
             </section>
           {:else if gameMode === 'play' && gameConfig}
-            <div class="play-board-slot" class:reward-glow={!!wordReward}>
+            <div class="play-board-slot" class:reward-glow={!!wordReward} class:time-warning-glow={timeWarningGlow}>
               <GameBoard
                 {boardCells}
                 {selectedIndices}
@@ -1041,6 +1071,8 @@
           title="Tutte le soluzioni"
           words={solutionItems}
           showFoundState
+          showComparisonMarkers={challengeHasWordList}
+          opponentLabel={activeChallengeFrom?.name ?? 'Avversario'}
           onWordSelect={openDefinition}
         />
       {:else}

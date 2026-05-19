@@ -9,6 +9,7 @@
   export let resetKey = 0;
   export let onEnd: () => void = () => {};
   export let onTick: (elapsedSeconds: number) => void = () => {};
+  export let onRemainingTick: (remainingSeconds: number) => void = () => {};
 
   let remaining = seconds;
   let elapsed = 0;
@@ -35,6 +36,7 @@
     elapsed = 0;
     endSent = false;
     onTick(0);
+    onRemainingTick(seconds);
   }
 
   $: {
@@ -46,7 +48,9 @@
       }, 1000);
     } else if (active && !paused && seconds > 0 && remaining > 0) {
       intervalId = window.setInterval(() => {
-        remaining = Math.max(0, remaining - 1);
+        const nextRemaining = Math.max(0, remaining - 1);
+        remaining = nextRemaining;
+        onRemainingTick(nextRemaining);
       }, 1000);
     }
   }

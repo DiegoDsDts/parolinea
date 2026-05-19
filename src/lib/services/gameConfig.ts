@@ -124,15 +124,36 @@ export function getBoardLetters(config: GameConfig): string[][] {
   return parseGridLetters(config.letters, parseGridSize(config['grid-size']));
 }
 
+export function parseChallengeWords(words: string | undefined): string[] {
+  if (typeof words !== 'string') return [];
+
+  const seen = new Set<string>();
+  const parsedWords: string[] = [];
+  for (const word of words.split(',')) {
+    const normalized = word.trim().toLowerCase();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    parsedWords.push(normalized);
+  }
+
+  return parsedWords;
+}
+
+export function normalizeChallengeWords(words: string): string {
+  return parseChallengeWords(words).join(',');
+}
+
 export function getChallengeFrom(config: GameConfig): GameChallengeFrom | null {
   const from = config.from;
   if (!from || from.played !== true) return null;
   if (typeof from.name !== 'string' || typeof from.points !== 'number') return null;
+  const normalizedWords = typeof from.words === 'string' ? normalizeChallengeWords(from.words) : undefined;
 
   return {
     played: true,
     name: from.name.trim() || 'Giocatore',
     points: from.points,
+    ...(normalizedWords !== undefined ? { words: normalizedWords } : {}),
   };
 }
 
@@ -213,6 +234,10 @@ export function validateGameConfig(config: unknown): { valid: boolean; error?: s
 
       if (typeof from.points !== 'number' || !Number.isInteger(from.points) || from.points < 0) {
         return { valid: false, error: 'Il campo from.points deve essere un intero non negativo.' };
+      }
+
+      if (from.words !== undefined && typeof from.words !== 'string') {
+        return { valid: false, error: 'Il campo from.words deve essere una stringa di parole separate da virgola.' };
       }
     }
   }
