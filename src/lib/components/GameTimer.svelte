@@ -4,9 +4,12 @@
 
   export let seconds = 0;
   export let countUp = false;
+  export let trackElapsed = false;
   export let active = false;
   export let paused = false;
   export let resetKey = 0;
+  export let bonusSeconds = 0;
+  export let bonusKey = 0;
   export let onEnd: () => void = () => {};
   export let onTick: (elapsedSeconds: number) => void = () => {};
   export let onRemainingTick: (remainingSeconds: number) => void = () => {};
@@ -14,6 +17,7 @@
   let remaining = seconds;
   let elapsed = 0;
   let previousResetKey = resetKey;
+  let previousBonusKey = bonusKey;
   let endSent = false;
   let intervalId: number | null = null;
 
@@ -39,6 +43,14 @@
     onRemainingTick(seconds);
   }
 
+  $: if (bonusKey !== previousBonusKey) {
+    previousBonusKey = bonusKey;
+    if (!countUp && active && seconds > 0 && bonusSeconds > 0) {
+      remaining += bonusSeconds;
+      onRemainingTick(remaining);
+    }
+  }
+
   $: {
     clearTimer();
     if (active && !paused && countUp) {
@@ -48,6 +60,10 @@
       }, 1000);
     } else if (active && !paused && seconds > 0 && remaining > 0) {
       intervalId = window.setInterval(() => {
+        if (trackElapsed) {
+          elapsed += 1;
+          onTick(elapsed);
+        }
         const nextRemaining = Math.max(0, remaining - 1);
         remaining = nextRemaining;
         onRemainingTick(nextRemaining);

@@ -24,5 +24,6 @@ npm run preview
 - lunghezza minima delle parole configurabile
 - generazione casuale pesata sulle lettere italiane
 - griglia manuale e import sfida tramite link compatto
+- modalità Classica, Scoperta e Sopravvivenza
 - riepilogo con parole trovate, soluzioni totali e punteggio
 - tema chiaro, scuro o di sistema

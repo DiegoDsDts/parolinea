@@ -11,12 +11,20 @@
     Grid3X3,
     Settings,
   } from 'lucide-svelte';
-  import type { DictionaryStatus, GameConfig, StartGameOptions, WordQuantityMode } from '../types';
+  import type {
+    DictionaryStatus,
+    GameConfig,
+    GamePlayMode,
+    StartGameOptions,
+    SurvivalTimeMultiplier,
+    WordQuantityMode,
+  } from '../types';
   import {
     createManualGameConfig,
     formatSolutionScoreRange,
     generateGameConfig,
     getSolutionScoreRange,
+    isSurvivalTimeMultiplier,
   } from '../services/gameConfig';
   import { createEmptyBoard } from '../services/letters';
   import ImportGameModal from './ImportGameModal.svelte';
@@ -35,6 +43,8 @@
     wordQuantityMode: WordQuantityMode;
     discoveryMode: boolean;
     discoveryTargetPercent: number;
+    survivalMode: boolean;
+    survivalTimeMultiplier: SurvivalTimeMultiplier;
     manualMode: boolean;
     manualBoard: string[][];
   };
@@ -60,6 +70,12 @@
     { label: '30m', value: 1800 },
     { label: '60m', value: 3600 },
   ];
+  const survivalTimeOptions: Array<TileOption<number>> = [
+    { label: '5s', value: 5 },
+    { label: '10s', value: 10 },
+    { label: '15s', value: 15 },
+    { label: '30s', value: 30 },
+  ];
   const wordQuantityOptions: Array<TileOption<WordQuantityMode>> = [
     { label: 'Random', value: 'random' },
     { label: 'Basso', value: 'low' },
@@ -67,6 +83,7 @@
     { label: 'Alto', value: 'high' },
   ];
   const discoveryTargetOptions = [20, 30, 40, 50, 60, 70, 90, 100];
+  const survivalTimeMultiplierOptions: SurvivalTimeMultiplier[] = [1, 2, 3, 5, 10, 20];
 
   let gridSize = 5;
   let gameTime = 180;
@@ -74,6 +91,8 @@
   let wordQuantityMode: WordQuantityMode = 'random';
   let discoveryMode = false;
   let discoveryTargetPercent = 70;
+  let survivalMode = false;
+  let survivalTimeMultiplier: SurvivalTimeMultiplier = 3;
   let manualMode = false;
   let manualBoard = createEmptyBoard(gridSize);
   let manualEditorOpen = false;
@@ -103,6 +122,10 @@
   $: selectedScoreRange = manualMode ? null : getSolutionScoreRange(wordQuantityMode, gridSize, minWordLength);
   $: selectedScoreRangeLabel = manualMode ? 'Solo auto' : formatSolutionScoreRange(selectedScoreRange);
   $: quantityDetailLabel = validationError || selectedScoreRangeLabel;
+  $: activeTimeOptions = survivalMode ? survivalTimeOptions : timeOptions;
+  $: selectedMode = survivalMode ? 'survival' : discoveryMode ? 'discovery' : 'classic';
+  $: selectedModeLabel = survivalMode ? 'Sopravvivenza' : discoveryMode ? 'Scoperta' : 'Classica';
+  $: selectedModeDetail = survivalMode ? `${survivalTimeMultiplier}x` : discoveryMode ? `${discoveryTargetPercent}%` : '';
   $: if (startSignal !== lastStartSignal) {
     lastStartSignal = startSignal;
     startGame();
@@ -166,7 +189,10 @@
         minWordLength = settings.minWordLength;
       }
 
-      if (typeof settings.gameTime === 'number' && timeOptions.some((option) => option.value === settings.gameTime)) {
+      if (
+        typeof settings.gameTime === 'number' &&
+        [...timeOptions, ...survivalTimeOptions].some((option) => option.value === settings.gameTime)
+      ) {
         gameTime = settings.gameTime;
       }
 
@@ -178,8 +204,24 @@
         discoveryMode = settings.discoveryMode;
       }
 
+      if (typeof settings.survivalMode === 'boolean') {
+        survivalMode = settings.survivalMode;
+      }
+
+      if (survivalMode) discoveryMode = false;
+
       if (isDiscoveryTargetPercent(settings.discoveryTargetPercent)) {
         discoveryTargetPercent = settings.discoveryTargetPercent;
+      }
+
+      if (isSurvivalTimeMultiplier(settings.survivalTimeMultiplier)) {
+        survivalTimeMultiplier = settings.survivalTimeMultiplier;
+      }
+
+      if (survivalMode && !survivalTimeOptions.some((option) => option.value === gameTime)) {
+        gameTime = 10;
+      } else if (!survivalMode && !timeOptions.some((option) => option.value === gameTime)) {
+        gameTime = 180;
       }
 
       if (typeof settings.manualMode === 'boolean') {
@@ -206,6 +248,8 @@
       wordQuantityMode,
       discoveryMode,
       discoveryTargetPercent,
+      survivalMode,
+      survivalTimeMultiplier,
       manualMode,
       manualBoard: normalizeManualBoard(manualBoard),
     };
@@ -254,9 +298,15 @@
     modeSettingsOpen = true;
   }
 
-  function selectMode(mode: 'classic' | 'discovery') {
+  function selectMode(mode: GamePlayMode) {
     discoveryMode = mode === 'discovery';
-    if (discoveryMode && openMenu === 'time') openMenu = null;
+    survivalMode = mode === 'survival';
+    if ((discoveryMode || survivalMode) && openMenu === 'time') openMenu = null;
+    if (survivalMode && !survivalTimeOptions.some((option) => option.value === gameTime)) {
+      gameTime = 10;
+    } else if (mode === 'classic' && !timeOptions.some((option) => option.value === gameTime)) {
+      gameTime = 180;
+    }
     saveHomeSettings();
   }
 
@@ -274,6 +324,11 @@
 
   function selectDiscoveryTargetPercent(value: number) {
     discoveryTargetPercent = value;
+    saveHomeSettings();
+  }
+
+  function selectSurvivalTimeMultiplier(value: SurvivalTimeMultiplier) {
+    survivalTimeMultiplier = value;
     saveHomeSettings();
   }
 
@@ -349,6 +404,8 @@
       wordQuantityMode: manualMode ? 'random' : wordQuantityMode,
       discoveryMode,
       discoveryTargetPercent,
+      survivalMode,
+      survivalTimeMultiplier,
     });
   }
 
@@ -437,7 +494,7 @@
     >
       <Clock3 size={22} />
       <span>Tempo</span>
-      <strong>{discoveryMode ? 'Crono' : timeOptions.find((option) => option.value === gameTime)?.label}</strong>
+      <strong>{discoveryMode ? 'Crono' : activeTimeOptions.find((option) => option.value === gameTime)?.label}</strong>
       {#if !discoveryMode}
          <span class="tile-chevron"><ChevronDown size={16} /></span>
       {/if}
@@ -445,7 +502,7 @@
 
     {#if openMenu === 'time' && !discoveryMode}
       <div class="tile-menu" role="listbox" aria-label="Durata partita">
-        {#each timeOptions as option}
+        {#each activeTimeOptions as option}
           <button class:selected={option.value === gameTime} type="button" role="option" aria-selected={option.value === gameTime} on:click={() => selectGameTime(option.value)}>
             <span>{option.label}</span>
             {#if option.value === gameTime}<Check size={15} />{/if}
@@ -492,11 +549,11 @@
     {/if}
   </div>
 
-  <button class="board-tile mode-tile discovery-tile" class:active={discoveryMode} type="button" on:click={openModeSettings}>
+  <button class="board-tile mode-tile discovery-tile" class:active={selectedMode !== 'classic'} type="button" on:click={openModeSettings}>
     <Compass size={23} />
     <span>Modalità</span>
-    <strong>{discoveryMode ? 'Scoperta' : 'Classica'}</strong>
-    <small>{discoveryMode ? `${discoveryTargetPercent}%` : ''}</small>
+    <strong>{selectedModeLabel}</strong>
+    <small>{selectedModeDetail}</small>
   </button>
 
   <div class="tile-menu-wrap">
@@ -579,30 +636,40 @@
   <div class="mode-config">
     <div class="mode-list" role="listbox" aria-label="Modalità partita">
       <button
-        class:selected={!discoveryMode}
+        class:selected={selectedMode === 'classic'}
         type="button"
         role="option"
-        aria-selected={!discoveryMode}
+        aria-selected={selectedMode === 'classic'}
         on:click={() => selectMode('classic')}
       >
         <strong>Classica</strong>
         <span>Punteggio libero</span>
       </button>
       <button
-        class:selected={discoveryMode}
+        class:selected={selectedMode === 'discovery'}
         type="button"
         role="option"
-        aria-selected={discoveryMode}
+        aria-selected={selectedMode === 'discovery'}
         on:click={() => selectMode('discovery')}
       >
         <strong>Scoperta</strong>
         <span>Obiettivo a tempo</span>
       </button>
+      <button
+        class:selected={selectedMode === 'survival'}
+        type="button"
+        role="option"
+        aria-selected={selectedMode === 'survival'}
+        on:click={() => selectMode('survival')}
+      >
+        <strong>Sopravvivenza</strong>
+        <span>Bonus tempo</span>
+      </button>
     </div>
 
     <section class="mode-detail">
       <div class="mode-detail-scroll" aria-live="polite">
-        {#if discoveryMode}
+        {#if selectedMode === 'discovery'}
           <div>
             <h3>Scoperta</h3>
             <p>
@@ -626,6 +693,33 @@
                   on:click={() => selectDiscoveryTargetPercent(option)}
                 >
                   {option}%
+                </button>
+              {/each}
+            </div>
+          </div>
+        {:else if selectedMode === 'survival'}
+          <div>
+            <h3>Sopravvivenza</h3>
+            <p>
+              Parti con pochi secondi. Ogni parola valida aggiunge tempo al conto alla rovescia:
+              i punti della parola vengono moltiplicati per il bonus scelto.
+            </p>
+            <p>
+              Il risultato della partita è il tempo totale per cui resisti prima che il timer arrivi a zero.
+            </p>
+          </div>
+
+          <div class="threshold-field" role="group" aria-label="Bonus tempo">
+            <span>Bonus tempo</span>
+            <div class="threshold-options">
+              {#each survivalTimeMultiplierOptions as option}
+                <button
+                  class:selected={option === survivalTimeMultiplier}
+                  type="button"
+                  aria-pressed={option === survivalTimeMultiplier}
+                  on:click={() => selectSurvivalTimeMultiplier(option)}
+                >
+                  {option}x
                 </button>
               {/each}
             </div>
@@ -1019,7 +1113,7 @@
     }
 
     .mode-list {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .threshold-options button {

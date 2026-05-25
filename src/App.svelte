@@ -21,6 +21,7 @@
     generateGameConfig,
     getBoardLetters,
     getChallengeFrom,
+    getChallengeStartOptions,
     getSolutionScoreRange,
     parseChallengeWords,
     parseGridSize,
@@ -32,10 +33,12 @@
     BoardCell,
     EffectiveTheme,
     FeedbackType,
+    GameChallengeFrom,
     GameConfig,
     GameMode,
     SolveBoardResult,
     StartGameOptions,
+    SurvivalTimeMultiplier,
     ThemePreference,
     WordItem,
   } from './lib/types';
@@ -87,7 +90,7 @@
   let definitionOpen = false;
   let exportOpen = false;
   let exportCopied = false;
-  let wordReward: { id: number; word: string; score: number } | null = null;
+  let wordReward: { id: number; word: string; score: number; timeBonus?: number } | null = null;
   let toastMessage = '';
   let confirmOpen = false;
   let confirmTitle = '';
@@ -101,6 +104,10 @@
   let lastGameOptions: StartGameOptions = {};
   let discoveryMode = false;
   let discoveryTargetPercent = 70;
+  let survivalMode = false;
+  let survivalTimeMultiplier: SurvivalTimeMultiplier = 3;
+  let timeBonusSeconds = 0;
+  let timeBonusKey = 0;
   let finishedSolutionsRevealQueued = false;
   let ignoreFinishedSolutionsClick = false;
   let suppressDefinitionUntil = 0;
@@ -142,6 +149,7 @@
     remainingSeconds > 0 &&
     remainingSeconds <= 10;
   $: pendingChallengeFrom = pendingChallengeConfig ? getChallengeFrom(pendingChallengeConfig) : null;
+  $: challengeResult = survivalMode || discoveryMode ? finalElapsedSeconds : totalScore;
   $: recapGridSize = gameConfig ? parseGridSize(gameConfig['grid-size']) : 4;
   $: staticTileFont = `calc(var(--board-size) * ${0.5 / recapGridSize})`;
   $: displayPlayerName = playerName.trim();
@@ -156,7 +164,15 @@
       : $dictionaryStatus.wordsLoaded > 0
         ? `${$dictionaryStatus.wordsLoaded.toLocaleString('it-IT')} parole caricate`
         : 'Caricamento dizionario italiano';
-  $: challengeToken = gameConfig ? encodeChallengeConfig(gameConfig, displayPlayerName, totalScore, foundWordsList) : '';
+  $: challengeToken = gameConfig
+    ? encodeChallengeConfig(gameConfig, displayPlayerName, challengeResult, foundWordsList, {
+        ...lastGameOptions,
+        discoveryMode,
+        discoveryTargetPercent,
+        survivalMode,
+        survivalTimeMultiplier,
+      })
+    : '';
   $: challengeLink = challengeToken ? createChallengeUrl(challengeToken) : '';
 
   function syncBrowserThemeChrome(theme: EffectiveTheme) {
@@ -259,10 +275,10 @@
     }, 190);
   }
 
-  function showWordReward(word: string, score: number) {
+  function showWordReward(word: string, score: number, timeBonus?: number) {
     clearRewardTimer();
     rewardId += 1;
-    wordReward = { id: rewardId, word, score };
+    wordReward = { id: rewardId, word, score, timeBonus };
     rewardTimeout = window.setTimeout(() => {
       wordReward = null;
       rewardTimeout = null;
@@ -296,6 +312,8 @@
     calculationWordsFound = 0;
     generationAttempt = 0;
     generationTargetRange = null;
+    timeBonusSeconds = 0;
+    timeBonusKey = 0;
   }
 
   function getSolutionScore(words: WordItem[]): number {
@@ -306,6 +324,20 @@
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  }
+
+  function formatChallengeResult(challengeFrom: GameChallengeFrom | null): string {
+    if (!challengeFrom) return '';
+    if (challengeFrom.mode === 'survival') return `${formatRaceDuration(challengeFrom.points)} sopravv.`;
+    if (challengeFrom.mode === 'discovery') return `${formatRaceDuration(challengeFrom.points)}`;
+    return `${challengeFrom.points.toLocaleString('it-IT')} pt`;
+  }
+
+  function addSurvivalTime(score: number) {
+    const bonusSeconds = score * survivalTimeMultiplier;
+    timeBonusSeconds = bonusSeconds;
+    timeBonusKey += 1;
+    return bonusSeconds;
   }
 
   function serializeIndexPath(indices: number[], length = indices.length): string {
@@ -365,8 +397,10 @@
     dictionaryClient.cancelSolve();
     resetRoundState();
     lastGameOptions = { ...options };
-    discoveryMode = options.discoveryMode ?? false;
+    survivalMode = options.survivalMode ?? false;
+    discoveryMode = survivalMode ? false : (options.discoveryMode ?? false);
     discoveryTargetPercent = options.discoveryTargetPercent ?? 70;
+    survivalTimeMultiplier = options.survivalTimeMultiplier ?? 3;
     const currentGenerationVersion = generationVersion + 1;
     generationVersion = currentGenerationVersion;
     gameMode = 'loading';
@@ -460,7 +494,7 @@
     const challengeFrom = getChallengeFrom(config);
     if (challengeFrom) {
       pendingChallengeConfig = config;
-      pendingChallengeOptions = { ...options };
+      pendingChallengeOptions = { ...getChallengeStartOptions(config), ...options };
       gameMode = 'challenge';
       activeTab = 'game';
       return;
@@ -678,12 +712,13 @@
           feedbackType = 'word-duplicate';
         } else {
           const score = getWordScore(submittedWord, gameConfig['min-word-length']);
+          const timeBonus = survivalMode ? addSurvivalTime(score) : undefined;
           const nextFoundWords = new Set(foundWords).add(submittedWord);
           const nextFoundWordsList = [{ word: submittedWord, score }, ...foundWordsList];
           foundWords = nextFoundWords;
           foundWordsList = nextFoundWordsList;
           feedbackType = 'word-valid';
-          showWordReward(submittedWord, score);
+          showWordReward(submittedWord, score, timeBonus);
 
           if (discoveryMode && discoveryTargetScore > 0 && getSolutionScore(nextFoundWordsList) >= discoveryTargetScore) {
             finishGame();
@@ -868,6 +903,9 @@
                 <span class="current-word-text">{wordReward?.word ?? (currentWord || fadingWord?.word || '')}</span>
                 {#if wordReward}
                   <span class="current-word-points">+{wordReward.score}</span>
+                  {#if wordReward.timeBonus}
+                    <span class="current-word-points">+{wordReward.timeBonus}s</span>
+                  {/if}
                 {/if}
               </span>
             {/key}
@@ -883,14 +921,20 @@
               {/if}
             </strong>
             {#if activeChallengeFrom}
-              <span class="challenge-target">{activeChallengeFrom.name}: {activeChallengeFrom.points.toLocaleString('it-IT')} pt</span>
+              <span class="challenge-target">{activeChallengeFrom.name}: {formatChallengeResult(activeChallengeFrom)}</span>
+            {/if}
+            {#if survivalMode}
+              <span class="challenge-target">Vivo da {formatRaceDuration(elapsedSeconds)}</span>
             {/if}
             <GameTimer
               seconds={gameConfig['duration-sec']}
               countUp={discoveryMode}
+              trackElapsed={survivalMode}
               active={gameActive}
               paused={isPaused}
               resetKey={timerResetKey}
+              bonusSeconds={timeBonusSeconds}
+              bonusKey={timeBonusKey}
               onTick={(seconds) => (elapsedSeconds = seconds)}
               onRemainingTick={(seconds) => (remainingSeconds = seconds)}
               onEnd={() => endGame(false)}
@@ -902,7 +946,7 @@
             <span>Sfida</span>
           </div>
           <div class="board-meta challenge-meta">
-            <span class="challenge-target">{pendingChallengeFrom.points.toLocaleString('it-IT')} pt</span>
+            <span class="challenge-target">{formatChallengeResult(pendingChallengeFrom)}</span>
           </div>
         {:else if activeTab === 'game' && gameMode === 'finished'}
           <div class="board-title">
@@ -910,7 +954,10 @@
           </div>
           <div class="board-meta">
             <strong class="score-summary">
-              {#if discoveryMode}
+              {#if survivalMode}
+                <span class="score-points">{formatRaceDuration(finalElapsedSeconds)}</span>
+                <span class="score-percent">{totalScore} / {totalPossibleScore}</span>
+              {:else if discoveryMode}
                 <span class="score-points">{formatRaceDuration(finalElapsedSeconds)}</span>
                 <span class="score-percent">{totalScore} / {totalPossibleScore}</span>
               {:else}
@@ -925,7 +972,10 @@
           </div>
           <div class="board-meta">
             <strong class="score-summary">
-              {#if discoveryMode}
+              {#if survivalMode}
+                <span class="score-points">{formatRaceDuration(finalElapsedSeconds)}</span>
+                <span class="score-percent">{totalScore} / {totalPossibleScore}</span>
+              {:else if discoveryMode}
                 <span class="score-points">{formatRaceDuration(finalElapsedSeconds)}</span>
                 <span class="score-percent">{totalScore} / {totalPossibleScore}</span>
               {:else}
@@ -934,7 +984,7 @@
               {/if}
             </strong>
             {#if activeChallengeFrom}
-              <span class="challenge-target">{activeChallengeFrom.name}: {activeChallengeFrom.points.toLocaleString('it-IT')} pt</span>
+              <span class="challenge-target">{activeChallengeFrom.name}: {formatChallengeResult(activeChallengeFrom)}</span>
             {/if}
           </div>
         {:else if activeTab === 'info'}
@@ -982,8 +1032,18 @@
             <section class="challenge-board" aria-label="Sfida ricevuta">
               <span class="challenge-kicker">Sfida ricevuta</span>
               <h1>{pendingChallengeFrom.name}</h1>
-              <p>ha totalizzato</p>
-              <strong>{pendingChallengeFrom.points.toLocaleString('it-IT')} pt</strong>
+              {#if pendingChallengeFrom.mode === 'survival'}
+                <p>è sopravvissuto</p>
+                <strong>{formatRaceDuration(pendingChallengeFrom.points)}</strong>
+                <p>supera quel tempo</p>
+              {:else if pendingChallengeFrom.mode === 'discovery'}
+                <p>ha chiuso in</p>
+                <strong>{formatRaceDuration(pendingChallengeFrom.points)}</strong>
+                <p>prova a fare meglio</p>
+              {:else}
+                <p>ha totalizzato</p>
+                <strong>{pendingChallengeFrom.points.toLocaleString('it-IT')} pt</strong>
+              {/if}
               <button class="button primary" type="button" on:click={startPendingChallenge}>
                 <Play size={18} />
                 Inizia sfida
@@ -1048,9 +1108,19 @@
             on:click={showFinishedSolutions}
           >
             <span class="finished-kicker">Partita finita</span>
-            <strong>{discoveryMode ? `Tempo ${formatRaceDuration(finalElapsedSeconds)}` : 'Vedi soluzioni'}</strong>
+            <strong>
+              {#if survivalMode}
+                Sopravvissuto {formatRaceDuration(finalElapsedSeconds)}
+              {:else if discoveryMode}
+                Tempo {formatRaceDuration(finalElapsedSeconds)}
+              {:else}
+                Vedi soluzioni
+              {/if}
+            </strong>
             <span class="finished-detail">
-              {#if discoveryMode}
+              {#if survivalMode}
+                Punti trovati: {totalScore} / {totalPossibleScore} pt
+              {:else if discoveryMode}
                 Obiettivo raggiunto: {totalScore} / {totalPossibleScore} pt
               {:else}
                 {foundWordsList.length} parole trovate su {allSolutionsList.length}

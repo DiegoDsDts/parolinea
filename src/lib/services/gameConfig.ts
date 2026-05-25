@@ -1,10 +1,19 @@
-import type { GameChallengeFrom, GameConfig, WordItem, WordQuantityMode } from '../types';
+import type {
+  GameChallengeFrom,
+  GameConfig,
+  GamePlayMode,
+  StartGameOptions,
+  SurvivalTimeMultiplier,
+  WordItem,
+  WordQuantityMode,
+} from '../types';
 import { createRandomBoard } from './letters';
 
 const CHALLENGE_FORMAT_VERSION = '1';
 const CHALLENGE_FIELD_SEPARATOR = '|';
 const COMPACT_QU_CELL = '~';
 const BASE_36_RADIX = 36;
+const SURVIVAL_TIME_MULTIPLIERS: SurvivalTimeMultiplier[] = [1, 2, 3, 5, 10, 20];
 
 export interface SolutionScoreRange {
   min: number;
@@ -148,6 +157,10 @@ export function normalizeChallengeWords(words: string): string {
   return parseChallengeWords(words).join(',');
 }
 
+export function isSurvivalTimeMultiplier(value: unknown): value is SurvivalTimeMultiplier {
+  return typeof value === 'number' && SURVIVAL_TIME_MULTIPLIERS.includes(value as SurvivalTimeMultiplier);
+}
+
 function encodeBase36(value: number): string {
   if (!Number.isInteger(value) || value < 0) {
     throw new Error('Numero sfida non valido.');
@@ -236,21 +249,31 @@ function serializeFoundWords(words: WordItem[]): string {
 export function encodeChallengeConfig(
   config: GameConfig,
   playerName: string,
-  points: number,
+  result: number,
   foundWords: WordItem[],
+  options: StartGameOptions = {},
 ): string {
   const normalizedConfig = normalizeGameConfig(config);
   const gridSize = parseGridSize(normalizedConfig['grid-size']);
   const minWordLength = normalizedConfig['min-word-length'];
   const compactGridAndMin = `${encodeBase36(gridSize)}${encodeBase36(minWordLength)}`;
+  const modeCode = options.survivalMode ? 's' : options.discoveryMode ? 'd' : 'c';
+  const modeParam =
+    modeCode === 's'
+      ? encodeBase36(options.survivalTimeMultiplier ?? 3)
+      : modeCode === 'd'
+        ? encodeBase36(options.discoveryTargetPercent ?? 70)
+        : '';
   const fields = [
     CHALLENGE_FORMAT_VERSION,
     compactGridAndMin,
     encodeBase36(normalizedConfig['duration-sec']),
     boardToCompactLetters(normalizedConfig),
-    encodeBase36(points),
+    encodeBase36(result),
     encodeURIComponent(playerName.trim() || 'Giocatore'),
     serializeFoundWords(foundWords),
+    modeCode,
+    modeParam,
   ];
 
   return encodeUtf8Base64Url(fields.join(CHALLENGE_FIELD_SEPARATOR));
@@ -265,7 +288,7 @@ export function decodeChallengeToken(token: string): GameConfig {
   }
 
   const fields = decodedPayload.split(CHALLENGE_FIELD_SEPARATOR);
-  if (fields.length !== 7 || fields[0] !== CHALLENGE_FORMAT_VERSION || fields[1].length !== 2) {
+  if ((fields.length !== 7 && fields.length !== 9) || fields[0] !== CHALLENGE_FORMAT_VERSION || fields[1].length !== 2) {
     throw new Error('Formato sfida non supportato.');
   }
 
@@ -279,6 +302,21 @@ export function decodeChallengeToken(token: string): GameConfig {
   } catch {
     throw new Error('Nome sfidante non valido.');
   }
+  const modeCode = fields[7] ?? 'c';
+  const mode: GamePlayMode =
+    modeCode === 's' ? 'survival' : modeCode === 'd' ? 'discovery' : modeCode === 'c' ? 'classic' : 'classic';
+  if (modeCode !== 's' && modeCode !== 'd' && modeCode !== 'c') {
+    throw new Error('Modalità sfida non supportata.');
+  }
+
+  const survivalTimeMultiplier =
+    mode === 'survival' ? decodeBase36(fields[8] || '3', 'Moltiplicatore tempo') : undefined;
+  if (survivalTimeMultiplier !== undefined && !isSurvivalTimeMultiplier(survivalTimeMultiplier)) {
+    throw new Error('Moltiplicatore tempo non valido.');
+  }
+
+  const discoveryTargetPercent =
+    mode === 'discovery' ? decodeBase36(fields[8] || '70', 'Soglia obiettivo') : undefined;
 
   const decodedConfig: GameConfig = {
     'grid-size': `${gridSize}x${gridSize}`,
@@ -290,6 +328,9 @@ export function decodeChallengeToken(token: string): GameConfig {
       name,
       points,
       words: normalizeChallengeWords(fields[6]),
+      mode,
+      ...(survivalTimeMultiplier !== undefined ? { survivalTimeMultiplier } : {}),
+      ...(discoveryTargetPercent !== undefined ? { discoveryTargetPercent } : {}),
     },
   };
   const validation = validateGameConfig(decodedConfig);
@@ -331,13 +372,47 @@ export function getChallengeFrom(config: GameConfig): GameChallengeFrom | null {
   if (!from || from.played !== true) return null;
   if (typeof from.name !== 'string' || typeof from.points !== 'number') return null;
   const normalizedWords = typeof from.words === 'string' ? normalizeChallengeWords(from.words) : undefined;
+  const mode = from.mode === 'survival' || from.mode === 'discovery' || from.mode === 'classic' ? from.mode : undefined;
+  const survivalTimeMultiplier = isSurvivalTimeMultiplier(from.survivalTimeMultiplier)
+    ? from.survivalTimeMultiplier
+    : undefined;
+  const discoveryTargetPercent =
+    typeof from.discoveryTargetPercent === 'number' && Number.isInteger(from.discoveryTargetPercent)
+      ? from.discoveryTargetPercent
+      : undefined;
 
   return {
     played: true,
     name: from.name.trim() || 'Giocatore',
     points: from.points,
     ...(normalizedWords !== undefined ? { words: normalizedWords } : {}),
+    ...(mode ? { mode } : {}),
+    ...(survivalTimeMultiplier !== undefined ? { survivalTimeMultiplier } : {}),
+    ...(discoveryTargetPercent !== undefined ? { discoveryTargetPercent } : {}),
   };
+}
+
+export function getChallengeStartOptions(config: GameConfig): StartGameOptions {
+  const challengeFrom = getChallengeFrom(config);
+  if (!challengeFrom) return {};
+
+  if (challengeFrom.mode === 'survival') {
+    return {
+      survivalMode: true,
+      survivalTimeMultiplier: challengeFrom.survivalTimeMultiplier ?? 3,
+      wordQuantityMode: 'random',
+    };
+  }
+
+  if (challengeFrom.mode === 'discovery') {
+    return {
+      discoveryMode: true,
+      discoveryTargetPercent: challengeFrom.discoveryTargetPercent ?? 70,
+      wordQuantityMode: 'random',
+    };
+  }
+
+  return {};
 }
 
 export function normalizeGameConfig(config: GameConfig): GameConfig {
@@ -421,6 +496,24 @@ export function validateGameConfig(config: unknown): { valid: boolean; error?: s
 
       if (from.words !== undefined && typeof from.words !== 'string') {
         return { valid: false, error: 'Il campo from.words deve essere una stringa di parole separate da virgola.' };
+      }
+
+      if (from.mode !== undefined && from.mode !== 'classic' && from.mode !== 'discovery' && from.mode !== 'survival') {
+        return { valid: false, error: 'Il campo from.mode contiene una modalità non valida.' };
+      }
+
+      if (from.survivalTimeMultiplier !== undefined && !isSurvivalTimeMultiplier(from.survivalTimeMultiplier)) {
+        return { valid: false, error: 'Il moltiplicatore tempo della sfida non è valido.' };
+      }
+
+      if (
+        from.discoveryTargetPercent !== undefined &&
+        (typeof from.discoveryTargetPercent !== 'number' ||
+          !Number.isInteger(from.discoveryTargetPercent) ||
+          from.discoveryTargetPercent < 1 ||
+          from.discoveryTargetPercent > 100)
+      ) {
+        return { valid: false, error: 'La soglia Scoperta della sfida deve essere tra 1 e 100.' };
       }
     }
   }

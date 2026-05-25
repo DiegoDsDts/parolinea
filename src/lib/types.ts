@@ -4,11 +4,15 @@ export type FeedbackType = 'word-valid' | 'word-duplicate' | 'word-invalid' | nu
 export type ThemePreference = 'light' | 'dark' | 'system';
 export type EffectiveTheme = 'light' | 'dark';
 export type WordQuantityMode = 'random' | 'low' | 'medium' | 'high';
+export type GamePlayMode = 'classic' | 'discovery' | 'survival';
+export type SurvivalTimeMultiplier = 1 | 2 | 3 | 5 | 10 | 20;
 
 export interface StartGameOptions {
   wordQuantityMode?: WordQuantityMode;
   discoveryMode?: boolean;
   discoveryTargetPercent?: number;
+  survivalMode?: boolean;
+  survivalTimeMultiplier?: SurvivalTimeMultiplier;
 }
 
 export interface GameConfig {
@@ -24,6 +28,9 @@ export interface GameChallengeFrom {
   name: string;
   points: number;
   words?: string;
+  mode?: GamePlayMode;
+  survivalTimeMultiplier?: SurvivalTimeMultiplier;
+  discoveryTargetPercent?: number;
 }
 
 export interface GameConfigFrom {
@@ -31,6 +38,9 @@ export interface GameConfigFrom {
   name?: string;
   points?: number;
   words?: string;
+  mode?: GamePlayMode;
+  survivalTimeMultiplier?: SurvivalTimeMultiplier;
+  discoveryTargetPercent?: number;
 }
 
 export interface BoardCell {
